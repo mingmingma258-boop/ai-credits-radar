@@ -57,6 +57,40 @@ _No P0/P1/P2/P3 findings. The PR adds only the approved coordination/workflow la
 
 _No remaining P0/P1/P2/P3 findings after the accepted fixes. The reviewed prototype preserves existing catalog behavior, keeps provider use opt-in, maintains human takeover boundaries, and implements FREE_ONLY routing as a fail-closed local control plane rather than a paid or uncertain fallback._
 
+---
+
+## Review target — TASK-003
+
+- Project: P001
+- Task: TASK-003 — Live FREE_ONLY gateway and bounded AI worker
+- Commit / PR: PR #3 (`task/TASK-003-live-free-worker` → `main`)
+- Initial reviewed implementation head before review fixes: `0d33d53da875ebeba4713bb90d53309a617ccd28`
+- Reviewer: Regular Chat
+- Date: 2026-09-03
+- CI observed before findings: `quality` run #89 job `validate` = `success`; `AI state check` run #26 = `success`
+
+## Findings
+
+### REV-003 — Direct invoke prompt has no global input-size cap
+
+- **Status:** ACCEPTED
+- **Severity:** P2
+- **Evidence:** `gateway.invoke_free_only()` validated only that `prompt` was non-empty; output tokens were capped but input length was not.
+- **Problem:** A very large direct prompt could consume a disproportionate amount of a scarce free quota in one otherwise-safe request.
+- **Impact:** FREE_ONLY prevents billing fallback but does not protect the user's free allocation from accidental oversized input consumption.
+- **Requested fix:** Add a hard prompt-character cap at the gateway boundary and keep Worker context/task bounds below that cap.
+- **Acceptance check:** Unit test rejects an oversized prompt before adapter invocation and confirms the fake adapter receives zero calls.
+
+### REV-004 — Local worker can allowlist untracked `.local.*` state files
+
+- **Status:** ACCEPTED
+- **Severity:** P2
+- **Evidence:** Worker path validation confined paths to repository root and allowed safe text suffixes, but did not exclude filenames such as `data/profile.local.json` or `data/credits_inventory.local.json`.
+- **Problem:** A user could accidentally include ignored personal/local state as model context.
+- **Impact:** Private profile/resource metadata could be sent to a provider despite the Worker being intended for repository context only.
+- **Requested fix:** Hard-block `.local.` filenames and generated/artifact/git-internal paths from Worker context, regardless of explicit allowlisting.
+- **Acceptance check:** Regression tests reject `.local.` context and keep normal tracked repository context working.
+
 ## Finding template
 
 ### REV-XXX — Short title
