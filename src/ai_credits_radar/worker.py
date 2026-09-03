@@ -6,12 +6,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .gateway import GatewaySafetyError, invoke_free_only
+from .gateway import invoke_free_only
 
 MAX_CONTEXT_FILES = 8
-MAX_CONTEXT_CHARS = 40000
+MAX_CONTEXT_CHARS = 30000
 MAX_TASK_TEXT_CHARS = 8000
 ALLOWED_CONTEXT_SUFFIXES = {".py", ".md", ".json", ".toml", ".yml", ".yaml", ".txt", ".css", ".js", ".html"}
+BLOCKED_CONTEXT_DIRS = {".git", "artifacts"}
 
 
 def load_worker_task(path: str | Path) -> dict[str, Any]:
@@ -66,6 +67,11 @@ def _safe_context_path(repo_root: Path, relative: str) -> Path:
     requested = Path(relative)
     if requested.is_absolute() or ".." in requested.parts:
         raise ValueError(f"unsafe context path: {relative!r}")
+    lowered_parts = {part.casefold() for part in requested.parts}
+    if lowered_parts & BLOCKED_CONTEXT_DIRS:
+        raise ValueError(f"blocked generated/internal context path: {relative!r}")
+    if ".local." in requested.name.casefold():
+        raise ValueError(f"blocked local/private context file: {relative!r}")
     if requested.suffix.casefold() not in ALLOWED_CONTEXT_SUFFIXES:
         raise ValueError(f"unsupported context file type: {relative!r}")
     root = repo_root.resolve()
