@@ -3,49 +3,65 @@
 ## Task
 
 - Project: P001
-- ID: TASK-001
-- Status: DONE — reviewed, awaiting final CI and human merge
+- ID: TASK-002
+- Status: IN_PROGRESS — implementation validated, awaiting Regular Chat Review
 
 ## Files / systems changed
 
-- Added project-local AI workflow coordination files only: `AGENTS.md`, `_ai/*`, `scripts/check_ai_state.py`, `.github/workflows/ai-state-check.yml`, and `.github/pull_request_template.md`.
-- Existing product/catalog/provider files are unchanged.
+- Added `src/ai_credits_radar/review.py` for deterministic offline catalog health reports.
+- Added `src/ai_credits_radar/eligibility.py` for transparent, non-authoritative eligibility triage.
+- Added `src/ai_credits_radar/inventory.py` and `src/ai_credits_radar/routing.py` for local Credits Inventory and fail-closed FREE_ONLY routing.
+- Added `src/ai_credits_radar/providers/` with the provider contract and offline Alibaba configuration adapter.
+- Extended `src/ai_credits_radar/cli.py` with `review`, `eligibility`, `inventory`, and `route`.
+- Added `scripts/ai_catalog_review.py` and `.github/workflows/ai-catalog-review.yml` with dry-run default and explicit invoke mode.
+- Added synthetic `data/profile.example.json` and `data/credits_inventory.example.json`; real local filenames are ignored by `.gitignore`.
+- Added `tests/test_prototype.py` and expanded `.github/workflows/ci.yml` with offline end-to-end smoke checks.
+- Added `docs/PROTOTYPE.md`, updated README, and synchronized `_ai/ARCHITECTURE.md` / `_ai/STATUS.md`.
 
 ## Behavior / result changed
 
-- Future Chat/Codex/Work sessions can recover P001 goals, architecture, durable decisions, task state, review findings, and handoff from this repository.
-- Executor work is bounded by Project ID, Work Type, task status, branch/PR rules, and project safety constraints.
-- Model-use strategy is explicit: strongest available Regular Chat reasoning model for planning/audit/review when selectable; lowest-cost Codex/Work model that still reliably satisfies quality and validation, escalating only when necessary.
-- No product/runtime behavior changed in TASK-001.
+- The tool now demonstrates an end-to-end safe control plane from catalog review through eligibility triage, local granted-resource inventory, and FREE_ONLY route selection.
+- Routing rejects unknown billing/quota states and returns `hard_stop` rather than a paid/uncertain fallback.
+- The example inventory includes a deliberately higher-priority unknown-billing resource to demonstrate that safety outranks apparent capability/priority.
+- Eligibility triage explains blockers/warnings/positive signals and always declares `authoritative: false`.
+- The Alibaba provider prototype never performs network invocation; quota/cost remain `unknown` offline and the adapter refuses `invoke()`.
+- The optional AI catalog review is manual, defaults to dry-run, exposes the API key only inside explicit `invoke` mode, caps completion tokens, withholds HTTP error bodies, and uploads advisory Markdown only.
+- Existing Alibaba smoke testing remains a separate manually triggered path.
 
 ## Validation performed
 
-- Existing repository structure, README, quality CI, workflows, and scripts were read before bootstrap changes.
-- Main-to-task diff confirmed only 11 new coordination/workflow files; no pre-existing product file was modified.
-- PR #1 was opened from `task/TASK-001-bootstrap-ai-workflow` to `main`.
-- Existing `quality` run #27 succeeded, including package install, catalog validation, and unit tests.
-- `AI state check` run #3 succeeded, including `Validate AI workflow state`.
-- Regular Chat reviewed PR #1 and recorded no P0/P1/P2/P3 findings.
-- No provider API call, secret read/write, login, verification, payment, application, or external account action was performed.
+- PR #2 opened from `task/TASK-002-vertical-prototype` to `main`.
+- Initial prototype `quality` run #40 succeeded, including existing catalog validation and all unit tests.
+- Initial prototype `AI state check` run #9 succeeded.
+- Quality run #44 succeeded after README/CI integration and included package install, catalog validation, all unit tests, and `Exercise offline prototype flow`.
+- `AI state check` run #11 succeeded on the same implementation stage.
+- The offline smoke flow executes `review`, `eligibility`, `inventory`, `route`, and `ai_catalog_review.py --mode dry-run` and verifies generated files are non-empty.
+- No Alibaba smoke test, AI `invoke`, login, OAuth, verification, payment, application, billing, or other external account action was performed.
 
 ## Validation not performed
 
-- Final state-only synchronization commits still require their own `quality` and `AI state check` results before merge.
-- Alibaba smoke test was intentionally not run because provider API calls are out of scope for this task.
+- `AI catalog review` invoke mode was intentionally not executed because TASK-002 does not authorize consuming provider quota.
+- Alibaba smoke test was intentionally not run.
+- Automated discovery, live multi-provider routing, benchmark tiering, application submission, and AI worker execution are not implemented in this prototype.
+- Final state-synchronization commits still require their own CI result after Review state is written.
 
 ## Known limitations
 
-- The durable files summarize project facts and do not reproduce the full historical chat transcript.
-- Long-term planned architecture is not the same as implemented functionality; planned components are explicitly marked planned in `_ai/ARCHITECTURE.md`.
-- Exact Chat/Codex/Work model names and usage economics can change; durable policy is capability/cost based.
+- Eligibility matching is a conservative triage over existing free-form catalog fields, not a provider-specific eligibility engine.
+- Inventory is local JSON and is not automatically refreshed from provider consoles.
+- S/A/B/Unknown tiers are accepted as inventory input but are not benchmark-derived yet.
+- The static web page remains catalog-focused; it does not yet display inventory/router/application/worker state.
+- Public-source discovery and change detection remain the next major product layer.
 
 ## Follow-up items
 
-- Confirm final synchronized PR #1 head passes both workflows.
-- Human decides whether to merge PR #1.
-- After merge, perform a read-only gap audit and define the first real product `CODE` task; current leading candidate is Manual AI Catalog Review v1, subject to audit.
+- Perform Regular Chat Review of PR #2 actual diff and safety contracts.
+- Fix only findings explicitly marked `ACCEPTED`.
+- Run final synchronized CI.
+- Human reviews the resulting prototype and decides whether to merge.
+- After prototype acceptance, prioritize official-source Discovery/Verification before general live provider routing or AI workers.
 
 ## Commit / PR
 
-- Task branch: `task/TASK-001-bootstrap-ai-workflow`
-- PR: #1 — Bootstrap P001 AI workflow state
+- Task branch: `task/TASK-002-vertical-prototype`
+- PR: #2 — Build safe AI Credits Radar vertical prototype
