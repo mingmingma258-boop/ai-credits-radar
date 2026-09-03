@@ -125,7 +125,7 @@ Provider smoke tests and AI invoke mode were intentionally not run for TASK-002.
 ## TASK-003 — Live FREE_ONLY gateway and bounded AI worker
 
 - **Project:** P001
-- **Status:** READY
+- **Status:** DONE
 - **Work type:** CODE
 - **Owner:** human
 - **Executor:** bounded repository executor
@@ -135,14 +135,13 @@ Provider smoke tests and AI invoke mode were intentionally not run for TASK-002.
 ### In scope
 
 - Extend the credits inventory with explicit live-use safety attestations: provider id, confirmation timestamp, `free_quota_only`/equivalent stop protection, and per-run token/request caps.
-- Add a `FREE_ONLY` gateway that routes first, then performs provider preflight, refuses stale/unknown/unsafe attestations, caps output tokens, disables retries, and records sanitized local usage metadata.
+- Add a `FREE_ONLY` gateway that routes first, then performs provider preflight, refuses stale/unknown/unsafe attestations, caps input/output, disables retries, and records sanitized local usage metadata.
 - Promote the Alibaba Model Studio adapter from config-only to an explicitly gated live adapter using the OpenAI-compatible endpoint. It may invoke only after the gateway has produced a confirmed-safe route and live-use attestation.
 - Treat Alibaba `403 AllocationQuota.FreeTierOnly` as a safe exhaustion stop, not as a retry/fallback signal.
-- Add `credits-radar invoke` for explicit one-shot live use and a `--dry-run` path that exercises all safety gates without sending a request.
-- Add a bounded AI Worker v1 that accepts a task JSON plus an allowlist of repository context files, calls the same gateway, and writes proposal/patch/test-plan artifacts only; it must not edit files, commit, push, merge, access GitHub secrets, or run shell commands.
-- Add a manual GitHub Actions worker workflow whose default is dry-run. Live mode must require explicit per-run confirmations before the provider secret is exposed to the invoking step.
-- Add synthetic examples, documentation, and regression tests. PR CI remains provider-offline.
-- Synchronize post-merge TASK-002 state.
+- Add `credits-radar invoke` for explicit one-shot live use and a `--dry-run` path that exercises all repository-side safety gates without sending a request.
+- Add a bounded AI Worker v1 that accepts a task JSON plus an allowlist of repository context files, calls the same gateway, and writes reviewable artifacts only; it must not edit files, commit, push, merge, access GitHub secrets, or run shell commands.
+- Add a manual GitHub Actions worker workflow whose default is dry-run. Live mode requires explicit per-run confirmations before the provider secret is exposed to the invoking step.
+- Add synthetic examples, documentation, regression tests, and offline CI coverage.
 
 ### Out of scope
 
@@ -155,17 +154,17 @@ Provider smoke tests and AI invoke mode were intentionally not run for TASK-002.
 
 ### Acceptance criteria
 
-- [ ] Live invocation is impossible unless routing safety and explicit fresh live-use confirmation both pass.
-- [ ] Unknown/stale billing or quota state, missing stop protection, expired resource, missing key, unsupported provider, or Tier mismatch hard-stop before a request is sent.
-- [ ] Alibaba live adapter sends at most one bounded request per `invoke`, redacts secrets/errors, has no automatic retry, and recognizes `AllocationQuota.FreeTierOnly` as exhausted/free-only stop.
-- [ ] `credits-radar invoke --dry-run` reports the selected route and preflight without network access or provider secrets.
-- [ ] Live `credits-radar invoke` requires an explicit local inventory plus confirmation metadata; no committed example can accidentally authorize live use.
-- [ ] AI Worker reads only explicitly allowlisted context files under the repository root and writes artifacts only to a caller-selected output directory.
-- [ ] Worker prompt/output size limits prevent unbounded repository/context ingestion and large accidental calls.
-- [ ] Manual Actions worker defaults to dry-run; live step receives the secret only when both free-quota and stop-protection confirmations are true.
-- [ ] No provider call occurs in unit tests or PR CI; network behavior is mocked.
-- [ ] Existing catalog/prototype commands remain compatible and all tests/state checks pass.
-- [ ] Regular Chat reviews the final PR; all P0/P1/P2/P3 findings are resolved or explicitly triaged before human merge.
+- [x] Live invocation is impossible unless routing safety and explicit recent live-use confirmation both pass.
+- [x] Unknown/stale billing or quota state, missing stop protection, expired resource, missing key, unsupported provider, or Tier mismatch hard-stop before a request is sent.
+- [x] Alibaba live adapter sends at most one bounded request per `invoke`, has no automatic retry, blocks direct invocation, sanitizes errors, and recognizes `AllocationQuota.FreeTierOnly` as an exhausted/free-only stop.
+- [x] `credits-radar invoke --dry-run` reports selected route/preflight without network access or provider secrets.
+- [x] Live `credits-radar invoke` requires local inventory confirmation metadata and committed `example=true` inventory can never authorize live use.
+- [x] AI Worker reads only explicitly allowlisted repository context, blocks `.local.`/generated/git-internal paths, and writes artifacts only to a caller-selected output directory.
+- [x] Gateway/Worker input and output limits prevent unbounded context ingestion and oversized accidental calls.
+- [x] Manual Actions worker defaults to dry-run; live step receives the secret only when both free-quota and stop-protection confirmations are true.
+- [x] No provider call occurs in unit tests or PR CI; live network behavior is mocked.
+- [x] Existing catalog/prototype commands remain compatible; `quality` run #103 passed install, catalog validation, all tests and offline smoke flow; `AI state check` run #33 passed.
+- [x] Regular Chat reviewed PR #3; REV-003 and REV-004 were accepted, fixed, and no P0/P1/P2/P3 findings remain.
 
 ### Validation
 
@@ -177,4 +176,4 @@ credits-radar invoke --inventory data/credits_inventory.example.json --tier A --
 python scripts/free_ai_worker.py --task data/worker_task.example.json --inventory data/credits_inventory.example.json --dry-run --output-dir /tmp/free-ai-worker
 ```
 
-Do not run a real provider invocation for TASK-003 validation.
+No real provider invocation was performed for TASK-003 validation.
