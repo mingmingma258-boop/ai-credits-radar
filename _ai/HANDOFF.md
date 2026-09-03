@@ -4,7 +4,7 @@
 
 - Project: P001
 - ID: TASK-002
-- Status: IN_PROGRESS — implementation validated, awaiting Regular Chat Review
+- Status: DONE — reviewed, awaiting final synchronized CI and human merge
 
 ## Files / systems changed
 
@@ -16,26 +16,28 @@
 - Added `scripts/ai_catalog_review.py` and `.github/workflows/ai-catalog-review.yml` with dry-run default and explicit invoke mode.
 - Added synthetic `data/profile.example.json` and `data/credits_inventory.example.json`; real local filenames are ignored by `.gitignore`.
 - Added `tests/test_prototype.py` and expanded `.github/workflows/ci.yml` with offline end-to-end smoke checks.
-- Added `docs/PROTOTYPE.md`, updated README, and synchronized `_ai/ARCHITECTURE.md` / `_ai/STATUS.md`.
+- Added `docs/PROTOTYPE.md`, updated README, and synchronized `_ai/ARCHITECTURE.md`, `_ai/TASKS.md`, `_ai/STATUS.md`, and `_ai/REVIEW.md`.
 
 ## Behavior / result changed
 
 - The tool now demonstrates an end-to-end safe control plane from catalog review through eligibility triage, local granted-resource inventory, and FREE_ONLY route selection.
 - Routing rejects unknown billing/quota states and returns `hard_stop` rather than a paid/uncertain fallback.
-- The example inventory includes a deliberately higher-priority unknown-billing resource to demonstrate that safety outranks apparent capability/priority.
-- Eligibility triage explains blockers/warnings/positive signals and always declares `authoritative: false`.
+- The example inventory includes a deliberately higher-priority unknown-billing resource to prove safety outranks apparent capability/priority.
+- Eligibility triage explains blockers/warnings/positive signals, always declares `authoritative: false`, and preserves explicit no-card language instead of inverting it into a payment warning.
 - The Alibaba provider prototype never performs network invocation; quota/cost remain `unknown` offline and the adapter refuses `invoke()`.
-- The optional AI catalog review is manual, defaults to dry-run, exposes the API key only inside explicit `invoke` mode, caps completion tokens, withholds HTTP error bodies, and uploads advisory Markdown only.
+- The optional AI catalog review is manual, defaults to dry-run, exposes the API key only inside explicit `invoke` mode, receives model input through an Actions environment variable rather than shell interpolation, caps completion tokens, withholds HTTP error bodies, and uploads advisory Markdown only.
 - Existing Alibaba smoke testing remains a separate manually triggered path.
 
 ## Validation performed
 
 - PR #2 opened from `task/TASK-002-vertical-prototype` to `main`.
-- Initial prototype `quality` run #40 succeeded, including existing catalog validation and all unit tests.
-- Initial prototype `AI state check` run #9 succeeded.
-- Quality run #44 succeeded after README/CI integration and included package install, catalog validation, all unit tests, and `Exercise offline prototype flow`.
-- `AI state check` run #11 succeeded on the same implementation stage.
-- The offline smoke flow executes `review`, `eligibility`, `inventory`, `route`, and `ai_catalog_review.py --mode dry-run` and verifies generated files are non-empty.
+- Initial implementation passed `quality` run #40 and `AI state check` run #9.
+- Integrated documentation/offline-flow stage passed `quality` run #44, including `Exercise offline prototype flow`, and `AI state check` run #11.
+- Pre-review durable-state stage passed `quality` run #54 and `AI state check` run #16.
+- Regular Chat Review found REV-001 (workflow input shell interpolation) and REV-002 (no-card negation inversion), both P2 and both triaged `ACCEPTED`.
+- Only those accepted findings were fixed.
+- Review-fix head `2899d4ead96b1f19068e3db649e784b5472117ee` passed `AI state check` run #20; `quality` run #62 validate job completed `success`, including all unit tests and the offline prototype flow.
+- `_ai/REVIEW.md` records both findings `FIXED` with no remaining P0/P1/P2/P3 findings.
 - No Alibaba smoke test, AI `invoke`, login, OAuth, verification, payment, application, billing, or other external account action was performed.
 
 ## Validation not performed
@@ -43,7 +45,7 @@
 - `AI catalog review` invoke mode was intentionally not executed because TASK-002 does not authorize consuming provider quota.
 - Alibaba smoke test was intentionally not run.
 - Automated discovery, live multi-provider routing, benchmark tiering, application submission, and AI worker execution are not implemented in this prototype.
-- Final state-synchronization commits still require their own CI result after Review state is written.
+- This final state-synchronization commit still requires its own `quality` and `AI state check` result before merge.
 
 ## Known limitations
 
@@ -55,10 +57,9 @@
 
 ## Follow-up items
 
-- Perform Regular Chat Review of PR #2 actual diff and safety contracts.
-- Fix only findings explicitly marked `ACCEPTED`.
-- Run final synchronized CI.
+- Confirm final synchronized PR #2 head passes both workflows.
 - Human reviews the resulting prototype and decides whether to merge.
+- Real provider/API invoke modes remain manual and require current free-quota/billing confirmation.
 - After prototype acceptance, prioritize official-source Discovery/Verification before general live provider routing or AI workers.
 
 ## Commit / PR
