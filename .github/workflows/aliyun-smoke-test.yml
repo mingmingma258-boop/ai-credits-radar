@@ -1,0 +1,27 @@
+name: Alibaba Cloud smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "A model confirmed to have free quota in the Bailian console"
+        required: true
+        default: "qwen-plus"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    env:
+      DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+      DASHSCOPE_BASE_URL: ${{ vars.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1' }}
+      DASHSCOPE_MODEL: ${{ inputs.model }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run minimal API smoke test
+        run: python scripts/aliyun_bailian_smoke_test.py
