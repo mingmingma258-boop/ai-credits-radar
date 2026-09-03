@@ -2,7 +2,7 @@
 
 ## Current phase
 
-TASK_001_REVIEWED_AWAITING_HUMAN_MERGE
+TASK_002_EXECUTED_AWAITING_REVIEW
 
 ## Current ready task
 
@@ -10,27 +10,31 @@ None.
 
 ## Last completed task
 
-TASK-001 — Bootstrap P001 AI workflow state.
+TASK-001 — Bootstrap P001 AI workflow state; PR #1 merged into `main`.
 
 ## Repository / project health
 
-- Existing catalog/CLI/tests/static web: present and unchanged by TASK-001
-- Existing quality CI: run #27 succeeded on the reviewed bootstrap head
-- Existing manual Alibaba smoke test: present and unchanged; not executed in TASK-001
-- Project workflow scaffold: installed on PR #1
-- AI state check: run #3 succeeded on the reviewed bootstrap head
-- Project facts and durable decisions: initialized
-- Regular Chat Review: completed with no P0/P1/P2/P3 findings
-- Product behavior changes in TASK-001: none
+- Existing catalog/search/list/summary/validate behavior: preserved
+- Existing static web and application guidance: preserved
+- Existing manual Alibaba smoke test: preserved and not executed in TASK-002
+- Offline catalog health review: implemented
+- Non-authoritative eligibility triage: implemented with local profile JSON
+- Credits Inventory prototype: implemented with local JSON validation/summary
+- FREE_ONLY router: implemented with fail-closed unknown billing/quota behavior
+- Provider Adapter contract: implemented; Alibaba adapter is offline/config-only and refuses live invoke
+- Manual AI catalog review: implemented with dry-run default, read-only repository permissions, explicit invoke mode and Artifact-only output
+- Product design / roadmap: documented in `docs/PROTOTYPE.md`
+- Quality CI: run #44 succeeded after prototype code/docs and includes offline end-to-end smoke flow
+- AI state check: run #11 succeeded on the same reviewed implementation stage
 
 ## Current blockers
 
-None. Only final synchronized-state CI and the human merge decision remain.
+None for the prototype implementation. PR #2 still requires final Regular Chat Review and final synchronized-state CI before any human merge decision.
 
 ## Next human decision
 
-After the final state-only synchronization commits pass both `quality` and `AI state check`, decide whether to merge PR #1. After merge, perform a read-only gap audit before promoting the first real product task to `READY`.
+After Regular Chat Review and final CI, review the prototype as a whole and decide whether to merge PR #2. Provider/API invoke modes remain manual and should not be run unless current free-quota/billing safety is confirmed.
 
 ## Last updated
 
-2026-09-03 by Regular Chat P001 review workflow.
+2026-09-03 by TASK-002 prototype workflow.
