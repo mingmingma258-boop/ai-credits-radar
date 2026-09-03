@@ -7,7 +7,7 @@ Normally keep only one task `READY` per executor run.
 ## TASK-001 — Bootstrap P001 AI workflow state
 
 - **Project:** P001
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Work type:** CODE
 - **Owner:** human
 - **Executor:** Regular Chat + GitHub setup
@@ -32,15 +32,15 @@ Normally keep only one task `READY` per executor run.
 
 ### Acceptance criteria
 
-- [ ] `_ai/PROJECT.md` identifies this repository as P001 with no `PXXX` placeholder.
-- [ ] Durable project boundary, architecture, safety constraints, and model-use policy are recorded.
-- [ ] Project-local checker validates Project ID, Work Type, duplicate task IDs, task/project identity, required state files, and single-READY invariant.
-- [ ] Existing quality CI and Alibaba smoke-test workflow remain unchanged.
-- [ ] New AI-state workflow runs independently on PR/push-to-main and requires no provider credentials.
-- [ ] No product behavior, catalog record, provider invocation code, or external account state changes.
-- [ ] `python scripts/check_ai_state.py` passes.
-- [ ] Existing `quality` CI passes on the bootstrap PR.
-- [ ] Regular Chat reviews the final bootstrap diff before human merge.
+- [x] `_ai/PROJECT.md` identifies this repository as P001 with no `PXXX` placeholder.
+- [x] Durable project boundary, architecture, safety constraints, and model-use policy are recorded.
+- [x] Project-local checker validates Project ID, Work Type, duplicate task IDs, task/project identity, required state files, and single-READY invariant.
+- [x] Existing quality CI and Alibaba smoke-test workflow remain unchanged.
+- [x] New AI-state workflow runs independently on PR/push-to-main and requires no provider credentials.
+- [x] No product behavior, catalog record, provider invocation code, or external account state changes.
+- [x] `python scripts/check_ai_state.py` passed in GitHub Actions `AI state check` run #3 on the synchronized review head.
+- [x] Existing `quality` CI passed in run #27 on the synchronized review head, including catalog validation and unit tests.
+- [x] Regular Chat reviewed PR #1 and recorded no P0/P1/P2/P3 findings.
 
 ### Validation
 
@@ -50,4 +50,4 @@ credits-radar validate
 python -m unittest discover -s tests -v
 ```
 
-No provider smoke test is required or permitted for this bootstrap task.
+No provider smoke test was required or permitted for this bootstrap task.
