@@ -88,7 +88,10 @@ class AliyunBailianAdapter(ProviderAdapter):
         max_tokens: int = 512,
         system: str | None = None,
         timeout: int = 45,
+        gateway_authorized: bool = False,
     ) -> InvocationResult:
+        if gateway_authorized is not True:
+            raise ProviderInvocationError("Direct live invocation is blocked; use the FREE_ONLY gateway.")
         credential = self.check_credentials()
         region = self.check_region()
         if not credential.ok:
