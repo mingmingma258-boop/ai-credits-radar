@@ -43,6 +43,18 @@
           <option value="student">学生资格</option>
           <option value="partner-portal">合作方入口</option>
         </select>
+        <select id="status" aria-label="状态">
+          <option value="">全部状态</option>
+          <option value="active">仍公开</option>
+          <option value="conditional">有条件</option>
+          <option value="verify-before-apply">先核验</option>
+        </select>
+        <select id="sort" aria-label="排序方式">
+          <option value="priority">按优先级</option>
+          <option value="amount">按最高额度</option>
+          <option value="verified">按核验日期</option>
+          <option value="name">按名称</option>
+        </select>
         <label class="check"><input id="applications" type="checkbox" /> 只看可申请</label>
       </section>
 
@@ -59,4 +71,3 @@
     <script type="module" src="./app.js"></script>
   </body>
 </html>
-

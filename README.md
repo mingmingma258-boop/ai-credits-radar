@@ -21,6 +21,8 @@ credits-radar summary
 credits-radar list --kind api
 credits-radar list --application-only
 credits-radar search gpu
+credits-radar list --status conditional --sort amount
+credits-radar list --access student --active-only
 credits-radar validate
 ```
 
@@ -43,6 +45,8 @@ python -m http.server 8080
 - `handoff`：是否通常需要登录、业务/身份验证或合作方代码；
 - `payment_note` / `caution`：信用卡、自动升级、数据使用、配额和区域限制等提醒。
 
+CLI 的 `--status` 可把“仍公开”“有条件”和“先核验”分开，`--sort amount` 使用目录中的最高展示额度排序；搜索还会覆盖申请条件、有效期和风险提示。
+
 “active”只表示官方页面仍公开提供该机会，不代表任何人一定符合资格，也不代表额度必然获批。具体条款、地区、模型、账户历史和审核结果以供应商页面为准。
 
 ## 申请工作流
@@ -57,6 +61,10 @@ python -m http.server 8080
 4. 把结果记录在个人副本或 issue 中，不要把 token、账单截图或身份证件提交到仓库。
 
 更详细的申请清单见 [`docs/application-playbook.md`](docs/application-playbook.md)。
+
+### 中国大陆地区的额外核验
+
+目录中的“官方页面可访问”不等于该机会一定对中国大陆账号开放。申请前应在供应商页面确认实际地区、运营主体、模型/服务可用性、付款要求和账号历史；不要用虚假地址、虚假学生身份、VPN 或重复账号规避地区与风控限制。微软全球 Azure 与“中国区 Azure（由 21Vianet 运营）”是分开的服务环境，学生邮箱能否通过验证也以页面实际结果为准。可先查看 [Azure for Students](https://azure.microsoft.com/en-us/free/students) 的学生要求与 [Azure 中国区](https://www.azure.cn/en-us/) 的服务说明。
 
 ## 项目结构
 

@@ -35,6 +35,7 @@ VALID_KINDS = {"api", "cloud", "developer", "gpu", "startup", "student", "trial"
 VALID_STATUS = {"active", "conditional", "verify-before-apply"}
 VALID_ACCESS = {"account-signup", "application", "free-tier", "partner-portal", "student"}
 VALID_HANDOFF = {"none", "login", "application-review", "verification-or-identity", "partner-code"}
+VALID_SORTS = {"priority", "amount", "name", "verified"}
 
 
 def load_catalog(path: str | Path = DEFAULT_DATA_PATH) -> dict[str, Any]:
@@ -133,9 +134,11 @@ def filter_programs(
     query: str | None = None,
     kind: str | None = None,
     access: str | None = None,
+    status: str | None = None,
     resource_type: str | None = None,
     application_only: bool = False,
     active_only: bool = False,
+    sort_by: str = "priority",
 ) -> list[dict[str, Any]]:
     """Filter catalog records with case-insensitive text matching."""
 
@@ -145,6 +148,8 @@ def filter_programs(
         if kind and program.get("kind") != kind:
             continue
         if access and program.get("access") != access:
+            continue
+        if status and program.get("status") != status:
             continue
         if resource_type and resource_type not in program.get("resource_types", []):
             continue
@@ -159,7 +164,11 @@ def filter_programs(
                     str(program.get("name", "")),
                     str(program.get("benefit", "")),
                     str(program.get("eligibility", "")),
+                    str(program.get("requirements", "")),
+                    str(program.get("duration", "")),
                     str(program.get("notes", "")),
+                    str(program.get("caution", "")),
+                    str(program.get("payment_note", "")),
                     " ".join(program.get("tags", [])),
                 ]
             ).casefold()
@@ -167,10 +176,51 @@ def filter_programs(
                 continue
         result.append(program)
 
-    return sorted(
-        result,
-        key=lambda item: (-item.get("priority", 0), item.get("provider", ""), item.get("name", "")),
-    )
+    return sort_programs(result, sort_by=sort_by)
+
+
+def sort_programs(programs: Iterable[dict[str, Any]], *, sort_by: str = "priority") -> list[dict[str, Any]]:
+    """Return records in a predictable display order."""
+
+    records = list(programs)
+    if sort_by not in VALID_SORTS:
+        sort_by = "priority"
+
+    def common_key(item: dict[str, Any]) -> tuple[Any, ...]:
+        return (
+            -int(item.get("priority", 0)),
+            str(item.get("provider", "")).casefold(),
+            str(item.get("name", "")).casefold(),
+        )
+
+    if sort_by == "name":
+        return sorted(
+            records,
+            key=lambda item: (
+                str(item.get("name", "")).casefold(),
+                str(item.get("provider", "")).casefold(),
+            ),
+        )
+    if sort_by == "amount":
+        return sorted(
+            records,
+            key=lambda item: (
+                -(item.get("amount_usd_max") if isinstance(item.get("amount_usd_max"), (int, float)) else -1),
+                *common_key(item),
+            ),
+        )
+    if sort_by == "verified":
+        return sorted(
+            records,
+            key=lambda item: (
+                str(item.get("last_verified", "")),
+                -int(item.get("priority", 0)),
+                str(item.get("provider", "")).casefold(),
+                str(item.get("name", "")).casefold(),
+            ),
+            reverse=True,
+        )
+    return sorted(records, key=common_key)
 
 
 def summary(programs: Iterable[dict[str, Any]]) -> dict[str, Any]:
@@ -188,4 +238,3 @@ def summary(programs: Iterable[dict[str, Any]]) -> dict[str, Any]:
         "by_kind": dict(sorted(by_kind.items())),
         "by_access": dict(sorted(by_access.items())),
     }
-

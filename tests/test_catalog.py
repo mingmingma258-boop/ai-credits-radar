@@ -35,9 +35,24 @@ class CatalogTests(unittest.TestCase):
         self.assertGreaterEqual(len(records), 4)
         self.assertTrue(all(record["access"] == "application" for record in records))
 
+    def test_status_filter(self):
+        records = filter_programs(self.programs, status="conditional")
+        self.assertTrue(records)
+        self.assertTrue(all(record["status"] == "conditional" for record in records))
+
     def test_search_is_case_insensitive(self):
         records = filter_programs(self.programs, query="HUGGINGFACE")
         self.assertEqual([record["id"] for record in records], ["huggingface-zerogpu"])
+
+    def test_search_includes_requirements_and_cautions(self):
+        records = filter_programs(self.programs, query="credit card")
+        self.assertTrue(records)
+        self.assertTrue(any("payment_note" in record or "caution" in record for record in records))
+
+    def test_amount_sort_keeps_unknown_amounts_last(self):
+        records = filter_programs(self.programs, sort_by="amount")
+        self.assertIsNotNone(records[0]["amount_usd_max"])
+        self.assertIsNone(records[-1]["amount_usd_max"])
 
     def test_summary_is_consistent(self):
         result = summary(self.programs)
@@ -77,4 +92,3 @@ class ValidationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

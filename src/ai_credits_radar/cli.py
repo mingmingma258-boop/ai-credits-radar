@@ -30,14 +30,17 @@ def build_parser() -> argparse.ArgumentParser:
     _common_filters(list_parser)
     list_parser.add_argument("--kind", choices=["api", "cloud", "developer", "gpu", "startup", "student", "trial"])
     list_parser.add_argument("--access", choices=["account-signup", "application", "free-tier", "partner-portal", "student"])
+    list_parser.add_argument("--status", choices=["active", "conditional", "verify-before-apply"])
     list_parser.add_argument("--resource", dest="resource_type", help="resource type, e.g. gpu or api")
     list_parser.add_argument("--application-only", action="store_true")
     list_parser.add_argument("--active-only", action="store_true")
+    list_parser.add_argument("--sort", choices=["priority", "amount", "name", "verified"], default="priority")
     list_parser.add_argument("--json", action="store_true", dest="as_json")
 
     search_parser = subparsers.add_parser("search", help="search provider, benefit, eligibility, or tags")
     _common_filters(search_parser)
     search_parser.add_argument("query")
+    search_parser.add_argument("--sort", choices=["priority", "amount", "name", "verified"], default="priority")
     search_parser.add_argument("--json", action="store_true", dest="as_json")
 
     summary_parser = subparsers.add_parser("summary", help="show catalog counts")
@@ -60,14 +63,14 @@ def _print_records(records: list[dict[str, Any]], as_json: bool = False) -> None
     if not records:
         print("No matching opportunities.")
         return
-    print(f"{'ID':32} {'TYPE':10} {'ACCESS':18} {'MAX':>10}  NAME")
-    print("-" * 100)
+    print(f"{'ID':32} {'TYPE':10} {'STATUS':18} {'AMOUNT DISPLAY':>28}  NAME")
+    print("-" * 125)
     for program in records:
         maximum = program.get("amount_usd_max")
-        display_amount = f"${maximum:,.0f}" if maximum is not None else "—"
+        display_amount = str(program.get("amount_display") or (f"${maximum:,.0f}" if maximum is not None else "—"))
         print(
             f"{program['id'][:32]:32} {program['kind'][:10]:10} "
-            f"{program['access'][:18]:18} {display_amount:>10}  {program['name']}"
+            f"{program['status'][:18]:18} {display_amount:>28}  {program['name']}"
         )
 
 
@@ -93,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "search":
-        records = filter_programs(programs, query=args.query)
+        records = filter_programs(programs, query=args.query, sort_by=args.sort)
         _print_records(records, args.as_json)
         return 0
 
@@ -101,9 +104,11 @@ def main(argv: list[str] | None = None) -> int:
         programs,
         kind=args.kind,
         access=args.access,
+        status=args.status,
         resource_type=args.resource_type,
         application_only=args.application_only,
         active_only=args.active_only,
+        sort_by=args.sort,
     )
     _print_records(records, args.as_json)
     return 0
@@ -111,4 +116,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

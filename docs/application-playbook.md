@@ -4,6 +4,14 @@
 
 ## 优先级
 
+如果申请人是中国大陆的个人开发者/学生，建议先走“学生资格 → 免费层 → 新客试用”的低风险顺序：
+
+1. **学生资格**：先核对 [Azure for Students](https://azure.microsoft.com/en-us/free/students) 是否接受本校邮箱、当前地区和账号状态。官方页面目前列出学生账号的 US$100/12 个月额度，且注册不要求信用卡；这不代表每个学校域名或中国区环境都会自动通过。
+2. **免费层与共享 GPU**：再用 Gemini API、Mistral、Groq、OpenRouter、Hugging Face ZeroGPU、Colab 或 Kaggle 做最小 demo；各服务的地区、登录和配额要逐页确认。
+3. **云试用**：只有在确实需要云端部署时，再核对 Google Cloud、AWS、Azure、Oracle 的新客资格和付款/账单规则。
+
+微软全球 Azure 与 Azure operated by 21Vianet 是分开的服务环境。不要用外国地址、虚假地区、VPN 或重复账号规避地区与风控；如果页面把你带到登录、学校邮箱验证、验证码、实名或最终提交，必须由账号持有人重新检查后完成。
+
 ### 第一层：先验证产品，不需要 startup 审核
 
 先用 Gemini Developer API、Mistral Free Mode、Groq Free Tier、OpenRouter free models、Cloudflare Workers AI、Hugging Face ZeroGPU、Colab 或 Kaggle 做小规模 demo。这样可以先产生真实的仓库、用量和产品说明，避免在申请表里描述一个尚未验证的想法。
@@ -42,4 +50,3 @@ Google AI startup、AWS Activate、Microsoft for Startups、DigitalOcean Hatch �
 - 给实验资源设置自动关停或最大生命周期；
 - 不把 token、cookie、账单截图、验证码或身份文件放入 Git；
 - 如果额度被拒，保留供应商的原始原因，不用多个账号重复申请或伪造资料。
-

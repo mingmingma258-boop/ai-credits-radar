@@ -21,18 +21,41 @@ function matches(program) {
   const query = $("#search").value.trim().toLowerCase();
   const kind = $("#kind").value;
   const access = $("#access").value;
+  const status = $("#status").value;
   const applications = $("#applications").checked;
   const haystack = [
     program.provider,
     program.name,
     program.benefit,
     ...(program.eligibility || []),
+    ...(program.requirements || []),
+    program.duration,
+    program.caution,
+    program.payment_note,
     ...(program.tags || []),
   ].join(" ").toLowerCase();
   return (!query || haystack.includes(query))
     && (!kind || program.kind === kind)
     && (!access || program.access === access)
+    && (!status || program.status === status)
     && (!applications || program.access === "application");
+}
+
+function sortRecords(records) {
+  const sort = $("#sort").value;
+  return [...records].sort((left, right) => {
+    if (sort === "name") return left.name.localeCompare(right.name, "zh");
+    if (sort === "amount") {
+      const leftAmount = left.amount_usd_max ?? -1;
+      const rightAmount = right.amount_usd_max ?? -1;
+      return rightAmount - leftAmount || right.priority - left.priority;
+    }
+    if (sort === "verified") {
+      return String(right.last_verified).localeCompare(String(left.last_verified))
+        || right.priority - left.priority;
+    }
+    return right.priority - left.priority || left.provider.localeCompare(right.provider, "en");
+  });
 }
 
 function renderStats(records) {
@@ -57,7 +80,12 @@ function renderCard(program) {
   const card = make("article", "card");
   const top = make("div", "card-top");
   top.append(make("span", `pill pill-${program.kind}`, program.kind.toUpperCase()));
-  top.append(make("span", "status", program.status === "active" ? "ACTIVE" : "CONDITIONAL"));
+  const statusLabel = {
+    active: "ACTIVE",
+    conditional: "CONDITIONAL",
+    "verify-before-apply": "VERIFY FIRST",
+  }[program.status] || String(program.status).toUpperCase();
+  top.append(make("span", "status", statusLabel));
   card.append(top);
   card.append(make("h2", "card-title", program.name));
   card.append(make("p", "provider", program.provider));
@@ -101,7 +129,7 @@ function renderCard(program) {
 }
 
 function render() {
-  const records = state.programs.filter(matches);
+  const records = sortRecords(state.programs.filter(matches));
   renderStats(records);
   const list = $("#list");
   list.replaceChildren(...records.map(renderCard));
@@ -123,10 +151,9 @@ async function init() {
   }
 }
 
-for (const selector of ["#search", "#kind", "#access", "#applications"]) {
+for (const selector of ["#search", "#kind", "#access", "#status", "#sort", "#applications"]) {
   $(selector).addEventListener("input", render);
   $(selector).addEventListener("change", render);
 }
 
 init();
-
