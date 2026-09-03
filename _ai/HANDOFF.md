@@ -3,66 +3,52 @@
 ## Task
 
 - Project: P001
-- ID: TASK-002
+- ID: TASK-003
 - Status: DONE — reviewed, awaiting final synchronized CI and human merge
 
 ## Files / systems changed
 
-- Added `src/ai_credits_radar/review.py` for deterministic offline catalog health reports.
-- Added `src/ai_credits_radar/eligibility.py` for transparent, non-authoritative eligibility triage.
-- Added `src/ai_credits_radar/inventory.py` and `src/ai_credits_radar/routing.py` for local Credits Inventory and fail-closed FREE_ONLY routing.
-- Added `src/ai_credits_radar/providers/` with the provider contract and offline Alibaba configuration adapter.
-- Extended `src/ai_credits_radar/cli.py` with `review`, `eligibility`, `inventory`, and `route`.
-- Added `scripts/ai_catalog_review.py` and `.github/workflows/ai-catalog-review.yml` with dry-run default and explicit invoke mode.
-- Added synthetic `data/profile.example.json` and `data/credits_inventory.example.json`; real local filenames are ignored by `.gitignore`.
-- Added `tests/test_prototype.py` and expanded `.github/workflows/ci.yml` with offline end-to-end smoke checks.
-- Added `docs/PROTOTYPE.md`, updated README, and synchronized `_ai/ARCHITECTURE.md`, `_ai/TASKS.md`, `_ai/STATUS.md`, and `_ai/REVIEW.md`.
+- Added `src/ai_credits_radar/gateway.py` for safety-gated one-shot FREE_ONLY invocation.
+- Extended Inventory with optional live-use attestation validation.
+- Promoted `providers/aliyun.py` to a live-capable Alibaba adapter that can only invoke when gateway-authorized.
+- Added `credits-radar invoke` with `--dry-run`, input/output caps and local ignored usage metadata.
+- Added `src/ai_credits_radar/worker.py`, `scripts/free_ai_worker.py`, synthetic worker task data and `.github/workflows/free-ai-worker.yml`.
+- Added `docs/FREE_ONLY-LIVE.md`, README/architecture updates, network-mocked tests and offline CI coverage.
 
 ## Behavior / result changed
 
-- The tool now demonstrates an end-to-end safe control plane from catalog review through eligibility triage, local granted-resource inventory, and FREE_ONLY route selection.
-- Routing rejects unknown billing/quota states and returns `hard_stop` rather than a paid/uncertain fallback.
-- The example inventory includes a deliberately higher-priority unknown-billing resource to prove safety outranks apparent capability/priority.
-- Eligibility triage explains blockers/warnings/positive signals, always declares `authoritative: false`, and preserves explicit no-card language instead of inverting it into a payment warning.
-- The Alibaba provider prototype never performs network invocation; quota/cost remain `unknown` offline and the adapter refuses `invoke()`.
-- The optional AI catalog review is manual, defaults to dry-run, exposes the API key only inside explicit `invoke` mode, receives model input through an Actions environment variable rather than shell interpolation, caps completion tokens, withholds HTTP error bodies, and uploads advisory Markdown only.
-- Existing Alibaba smoke testing remains a separate manually triggered path.
+- P001 can now prepare and, after explicit human provider-console confirmation, send one bounded Alibaba model request through the FREE_ONLY Gateway.
+- Live routing requires confirmed-free billing/quota, recent live attestation, Free Quota Only/stop protection, paid fallback disabled, supported provider/model/tier, non-expired resource and one-request/output caps.
+- Committed `example=true` inventory can dry-run but can never authorize a real request.
+- Direct Alibaba adapter live calls are blocked; the Gateway is the only authorization path.
+- `403 AllocationQuota.FreeTierOnly` becomes a hard stop with no retry/model switch/paid fallback.
+- Gateway prompt input is capped at 50,000 characters; Worker repository context is capped at 30,000 characters plus bounded task text.
+- Worker context is max eight explicit repository files and blocks `.local.*`, `.git` and generated `artifacts` paths.
+- Worker produces `run.json`/prompt preview/model-output Artifacts only; no file edits, shell, GitHub write, PR or merge authority.
+- Manual GitHub Actions Worker defaults to dry-run; `DASHSCOPE_API_KEY` exists only in the live step after both confirmation checkboxes are true.
 
 ## Validation performed
 
-- PR #2 opened from `task/TASK-002-vertical-prototype` to `main`.
-- Initial implementation passed `quality` run #40 and `AI state check` run #9.
-- Integrated documentation/offline-flow stage passed `quality` run #44, including `Exercise offline prototype flow`, and `AI state check` run #11.
-- Pre-review durable-state stage passed `quality` run #54 and `AI state check` run #16.
-- Regular Chat Review found REV-001 (workflow input shell interpolation) and REV-002 (no-card negation inversion), both P2 and both triaged `ACCEPTED`.
+- PR #3 opened from `task/TASK-003-live-free-worker` to `main`.
+- Initial integrated implementation passed `quality` run #89 and `AI state check` run #26.
+- Regular Chat Review found REV-003 (unbounded direct prompt) and REV-004 (local/private Worker context), both P2 and accepted.
 - Only those accepted findings were fixed.
-- Review-fix head `2899d4ead96b1f19068e3db649e784b5472117ee` passed `AI state check` run #20; `quality` run #62 validate job completed `success`, including all unit tests and the offline prototype flow.
-- `_ai/REVIEW.md` records both findings `FIXED` with no remaining P0/P1/P2/P3 findings.
-- No Alibaba smoke test, AI `invoke`, login, OAuth, verification, payment, application, billing, or other external account action was performed.
+- Review-fix head `1a315fe4bd56a68aede06314f3690e65a49c7663` passed `quality` run #103, including package install, catalog validation, all unit tests and the complete offline prototype flow; `AI state check` run #33 also succeeded.
+- Network/provider behavior is mocked in tests. Direct adapter calls are proven to stop before network and free-tier exhaustion is proven to make exactly one mocked request.
+- No real Alibaba/provider request, smoke test, login, account/billing setting, verification, payment, or application action was performed.
 
 ## Validation not performed
 
-- `AI catalog review` invoke mode was intentionally not executed because TASK-002 does not authorize consuming provider quota.
-- Alibaba smoke test was intentionally not run.
-- Automated discovery, live multi-provider routing, benchmark tiering, application submission, and AI worker execution are not implemented in this prototype.
-- This final state-synchronization commit still requires its own `quality` and `AI state check` result before merge.
+- The first real `credits-radar invoke` and live Worker request are intentionally not part of implementation validation.
+- P001 does not programmatically read Alibaba remaining free quota or the Free Quota Only switch; those are human-attested provider facts for this first live version.
+- Multi-provider live routing, automatic quota refresh, benchmark tiers, Discovery and application automation remain later work.
 
-## Known limitations
+## Known limitations / next practical step
 
-- Eligibility matching is a conservative triage over existing free-form catalog fields, not a provider-specific eligibility engine.
-- Inventory is local JSON and is not automatically refreshed from provider consoles.
-- S/A/B/Unknown tiers are accepted as inventory input but are not benchmark-derived yet.
-- The static web page remains catalog-focused; it does not yet display inventory/router/application/worker state.
-- Public-source discovery and change detection remain the next major product layer.
-
-## Follow-up items
-
-- Confirm final synchronized PR #2 head passes both workflows.
-- Human reviews the resulting prototype and decides whether to merge.
-- Real provider/API invoke modes remain manual and require current free-quota/billing confirmation.
-- After prototype acceptance, prioritize official-source Discovery/Verification before general live provider routing or AI workers.
+- Human must open the Alibaba Model Studio free-quota page, confirm the exact model still has quota and Free Quota Only / stop-when-exhausted is active, then update local inventory or use the manual Action confirmations.
+- After merge, run one `--dry-run`, then one small live request (for example ~200 output tokens). If that succeeds safely, use the same Gateway for the first bounded self-improvement Worker task and review its Artifact with Strong Chat before applying any change.
 
 ## Commit / PR
 
-- Task branch: `task/TASK-002-vertical-prototype`
-- PR: #2 — Build safe AI Credits Radar vertical prototype
+- Task branch: `task/TASK-003-live-free-worker`
+- PR: #3 — Add FREE_ONLY live gateway and bounded AI worker

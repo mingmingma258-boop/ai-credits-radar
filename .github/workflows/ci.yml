@@ -27,9 +27,18 @@ jobs:
           credits-radar eligibility --profile data/profile.example.json --json > /tmp/eligibility.json
           credits-radar inventory --inventory data/credits_inventory.example.json --json > /tmp/inventory.json
           credits-radar route --inventory data/credits_inventory.example.json --tier A --json > /tmp/route.json
+          credits-radar invoke --inventory data/credits_inventory.example.json --tier A --prompt "hello" --dry-run --json > /tmp/invoke.json
           python scripts/ai_catalog_review.py --mode dry-run --output /tmp/ai-catalog-review.md
+          python scripts/free_ai_worker.py \
+            --task data/worker_task.example.json \
+            --inventory data/credits_inventory.example.json \
+            --dry-run \
+            --output-dir /tmp/free-ai-worker
           test -s /tmp/catalog-review.md
           test -s /tmp/eligibility.json
           test -s /tmp/inventory.json
           test -s /tmp/route.json
+          test -s /tmp/invoke.json
           test -s /tmp/ai-catalog-review.md
+          test -s /tmp/free-ai-worker/run.json
+          test -s /tmp/free-ai-worker/prompt-preview.md
