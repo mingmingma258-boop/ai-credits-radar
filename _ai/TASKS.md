@@ -57,7 +57,7 @@ No provider smoke test was required or permitted for this bootstrap task.
 ## TASK-002 — Build safe end-to-end prototype
 
 - **Project:** P001
-- **Status:** IN_PROGRESS
+- **Status:** DONE
 - **Work type:** CODE
 - **Owner:** human
 - **Executor:** bounded repository executor
@@ -91,19 +91,19 @@ The post-bootstrap audit confirmed the repository already has a working catalog,
 
 ### Acceptance criteria
 
-- [ ] Existing `credits-radar list/search/summary/validate` behavior remains compatible.
-- [ ] `credits-radar review` can generate an offline Markdown catalog health report.
-- [ ] `credits-radar eligibility --profile <local-json>` returns explained, explicitly non-authoritative triage results without requiring sensitive identity fields.
-- [ ] `credits-radar inventory --inventory <local-json>` validates and summarizes free-resource holdings without secrets.
-- [ ] `credits-radar route --inventory <local-json> --tier A` selects only confirmed-safe free resources and returns a hard-stop result when none qualify.
-- [ ] Unknown billing/quota state is rejected by routing rather than assumed free.
-- [ ] Example profile/inventory files are clearly synthetic and real local files are ignored by Git.
-- [ ] Provider-adapter contract exists and Alibaba config checks never print the API key.
-- [ ] Manual `AI catalog review` workflow defaults to dry-run, uses `workflow_dispatch`, uploads an Artifact, has read-only repository permissions, and never commits changes.
-- [ ] AI invoke mode is explicit, bounded, sanitized, and is not executed as part of TASK-002 validation.
-- [ ] New unit tests cover review, eligibility, inventory, routing safety, adapter redaction/config behavior, and CLI integration.
-- [ ] Existing `quality` CI and `python scripts/check_ai_state.py` pass.
-- [ ] Regular Chat reviews the final PR and all P0/P1/P2/P3 findings are resolved or explicitly triaged before human merge.
+- [x] Existing `credits-radar list/search/summary/validate` behavior remains compatible.
+- [x] `credits-radar review` can generate an offline Markdown catalog health report.
+- [x] `credits-radar eligibility --profile <local-json>` returns explained, explicitly non-authoritative triage results without requiring sensitive identity fields.
+- [x] `credits-radar inventory --inventory <local-json>` validates and summarizes free-resource holdings without secrets.
+- [x] `credits-radar route --inventory <local-json> --tier A` selects only confirmed-safe free resources and returns a hard-stop result when none qualify.
+- [x] Unknown billing/quota state is rejected by routing rather than assumed free.
+- [x] Example profile/inventory files are clearly synthetic and real local files are ignored by Git.
+- [x] Provider-adapter contract exists and Alibaba config checks never print the API key.
+- [x] Manual `AI catalog review` workflow defaults to dry-run, uses `workflow_dispatch`, uploads an Artifact, has read-only repository permissions, and never commits changes.
+- [x] AI invoke mode is explicit, bounded, sanitized, and was not executed as part of TASK-002 validation.
+- [x] New unit tests cover review, eligibility, inventory, routing safety, adapter redaction/config behavior, workflow-input safety, and CLI integration.
+- [x] Existing `quality` CI and `python scripts/check_ai_state.py` passed after the accepted review fixes (`quality` run #62 validate job success; `AI state check` run #20 success).
+- [x] Regular Chat reviewed PR #2; REV-001 and REV-002 were accepted, fixed, and no P0/P1/P2/P3 findings remain.
 
 ### Validation
 
@@ -118,4 +118,4 @@ credits-radar route --inventory data/credits_inventory.example.json --tier A --j
 python scripts/ai_catalog_review.py --mode dry-run --output /tmp/ai-catalog-review.md
 ```
 
-Do not run provider smoke tests or AI invoke mode as TASK-002 validation.
+Provider smoke tests and AI invoke mode were intentionally not run for TASK-002.
