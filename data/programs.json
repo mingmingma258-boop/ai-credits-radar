@@ -289,7 +289,7 @@
       "priority": 78,
       "handoff": "verification-or-identity",
       "payment_note": "The official page states no credit card is required; do not submit an academic identity that is not yours.",
-      "caution": "Student status and region rules are checked by Microsoft.",
+      "caution": "Student status, school-domain recognition, and region rules are checked by Microsoft. The global Azure offer and Azure operated by 21Vianet are separate environments; use the actual region shown during signup and never substitute a foreign address.",
       "tags": ["azure", "student", "cloud", "no-card"]
     },
     {
