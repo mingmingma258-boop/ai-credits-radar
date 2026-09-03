@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +34,18 @@ def _iso_date(value: Any) -> bool:
         return False
     try:
         date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
+
+
+def _iso_datetime(value: Any) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
         return True
     except ValueError:
         return False
@@ -93,6 +105,26 @@ def validate_inventory(inventory: Any) -> list[str]:
                     errors.append(f"{model_prefix}.tier must be one of {sorted(VALID_TIERS)}")
                 if not isinstance(model.get("enabled"), bool):
                     errors.append(f"{model_prefix}.enabled must be boolean")
+
+        live = resource.get("live_use")
+        if live is not None:
+            live_prefix = f"{prefix}.live_use"
+            if not isinstance(live, dict):
+                errors.append(f"{live_prefix} must be an object")
+            else:
+                if not isinstance(live.get("provider_id"), str) or not live.get("provider_id", "").strip():
+                    errors.append(f"{live_prefix}.provider_id must be a non-empty string")
+                for field in ("allow_live", "free_quota_only", "paid_fallback_disabled"):
+                    if not isinstance(live.get(field), bool):
+                        errors.append(f"{live_prefix}.{field} must be boolean")
+                if not _iso_datetime(live.get("confirmed_at")):
+                    errors.append(f"{live_prefix}.confirmed_at must be null or ISO datetime")
+                max_requests = live.get("max_requests_per_run")
+                if not isinstance(max_requests, int) or isinstance(max_requests, bool) or max_requests < 1:
+                    errors.append(f"{live_prefix}.max_requests_per_run must be a positive integer")
+                max_tokens = live.get("max_output_tokens")
+                if not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or not 1 <= max_tokens <= 2048:
+                    errors.append(f"{live_prefix}.max_output_tokens must be an integer from 1 to 2048")
     return errors
 
 
@@ -103,6 +135,7 @@ def inventory_summary(inventory: dict[str, Any], *, today: date | None = None, e
     safe_billing = {"free_tier_confirmed", "free_quota_confirmed"}
     safe_quota = {"confirmed_available", "ongoing_free_tier"}
     expiring: list[str] = []
+    live_ready = 0
     for resource in resources:
         expires_at = resource.get("expires_at")
         if isinstance(expires_at, str):
@@ -112,6 +145,14 @@ def inventory_summary(inventory: dict[str, Any], *, today: date | None = None, e
                 continue
             if now <= expiry <= cutoff:
                 expiring.append(str(resource.get("id")))
+        live = resource.get("live_use")
+        if (
+            isinstance(live, dict)
+            and live.get("allow_live") is True
+            and live.get("free_quota_only") is True
+            and live.get("paid_fallback_disabled") is True
+        ):
+            live_ready += 1
     return {
         "total": len(resources),
         "available": sum(r.get("status") == "available" for r in resources),
@@ -123,6 +164,7 @@ def inventory_summary(inventory: dict[str, Any], *, today: date | None = None, e
             and (r.get("remaining") is None or r.get("remaining") > 0)
             for r in resources
         ),
+        "live_attested": live_ready,
         "unknown_billing": sum(r.get("billing_state") == "unknown" for r in resources),
         "unknown_quota": sum(r.get("quota_state") == "unknown" for r in resources),
         "expiring_soon": sorted(expiring),
