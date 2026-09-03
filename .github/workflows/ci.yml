@@ -21,4 +21,15 @@ jobs:
         run: credits-radar validate
       - name: Run tests
         run: python -m unittest discover -s tests -v
-
+      - name: Exercise offline prototype flow
+        run: |
+          credits-radar review --output /tmp/catalog-review.md
+          credits-radar eligibility --profile data/profile.example.json --json > /tmp/eligibility.json
+          credits-radar inventory --inventory data/credits_inventory.example.json --json > /tmp/inventory.json
+          credits-radar route --inventory data/credits_inventory.example.json --tier A --json > /tmp/route.json
+          python scripts/ai_catalog_review.py --mode dry-run --output /tmp/ai-catalog-review.md
+          test -s /tmp/catalog-review.md
+          test -s /tmp/eligibility.json
+          test -s /tmp/inventory.json
+          test -s /tmp/route.json
+          test -s /tmp/ai-catalog-review.md

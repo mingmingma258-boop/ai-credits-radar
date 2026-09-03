@@ -51,3 +51,71 @@ python -m unittest discover -s tests -v
 ```
 
 No provider smoke test was required or permitted for this bootstrap task.
+
+---
+
+## TASK-002 — Build safe end-to-end prototype
+
+- **Project:** P001
+- **Status:** DONE
+- **Work type:** CODE
+- **Owner:** human
+- **Executor:** bounded repository executor
+- **Reviewer:** Regular Chat
+- **Goal:** Turn the existing catalog MVP into a runnable vertical-slice prototype that demonstrates catalog review, truthful eligibility triage, credits inventory, free-only routing, and a manual AI catalog-review workflow without automatically invoking providers or modifying catalog data.
+
+### Context
+
+The post-bootstrap audit confirmed the repository already has a working catalog, CLI, tests, static web view, application guidance, quality CI, and a manual Alibaba smoke test. The highest-value prototype is therefore an incremental orchestration layer rather than a rewrite.
+
+### In scope
+
+- Add an offline catalog review/audit module that produces deterministic Markdown findings for stale verification, human handoff, payment/billing cautions, and catalog health.
+- Add a transparent eligibility-triage module driven by a local user-profile JSON file; it may classify likely/possible/not-match but must explain reasons and must not claim official eligibility.
+- Add a credits-inventory schema/module with validation and summary; commit only an example inventory and ignore local real inventory/profile files.
+- Add a `FREE_ONLY` router that rejects unknown billing/quota states, respects minimum capability tier, prioritizes confirmed-safe resources and earlier expiry, and hard-stops when no safe route exists.
+- Add a provider-adapter contract plus a non-network Alibaba configuration adapter sufficient to demonstrate credential/config safety without replacing the existing manual smoke test.
+- Extend the CLI with prototype commands for `review`, `eligibility`, `inventory`, and `route` while preserving existing commands.
+- Add a manual `AI catalog review` workflow and script. Default mode must be dry-run/report-only; opt-in invoke mode may use the existing `DASHSCOPE_API_KEY`, a bounded token limit, sanitized errors, and upload a Markdown Artifact only. It must not modify or commit `data/programs.json`.
+- Add design/prototype documentation, example local-data files, tests, and README usage.
+- Correct stale post-merge workflow status from TASK-001.
+
+### Out of scope
+
+- Automatically logging into provider consoles or application sites.
+- CAPTCHA, SMS/TOTP, identity/student verification, payment methods, billing changes, or final application submission.
+- Automatically invoking Alibaba or any other model/provider in CI, scheduled jobs, or default CLI paths.
+- Automatically editing, committing, or promoting catalog records based on AI output.
+- Full web dashboard rewrite, production task queue, real multi-provider invocation, automatic discovery crawler, or benchmark-based S/A/B classification.
+- Treating heuristic eligibility triage as provider approval or authoritative qualification.
+
+### Acceptance criteria
+
+- [x] Existing `credits-radar list/search/summary/validate` behavior remains compatible.
+- [x] `credits-radar review` can generate an offline Markdown catalog health report.
+- [x] `credits-radar eligibility --profile <local-json>` returns explained, explicitly non-authoritative triage results without requiring sensitive identity fields.
+- [x] `credits-radar inventory --inventory <local-json>` validates and summarizes free-resource holdings without secrets.
+- [x] `credits-radar route --inventory <local-json> --tier A` selects only confirmed-safe free resources and returns a hard-stop result when none qualify.
+- [x] Unknown billing/quota state is rejected by routing rather than assumed free.
+- [x] Example profile/inventory files are clearly synthetic and real local files are ignored by Git.
+- [x] Provider-adapter contract exists and Alibaba config checks never print the API key.
+- [x] Manual `AI catalog review` workflow defaults to dry-run, uses `workflow_dispatch`, uploads an Artifact, has read-only repository permissions, and never commits changes.
+- [x] AI invoke mode is explicit, bounded, sanitized, and was not executed as part of TASK-002 validation.
+- [x] New unit tests cover review, eligibility, inventory, routing safety, adapter redaction/config behavior, workflow-input safety, and CLI integration.
+- [x] Existing `quality` CI and `python scripts/check_ai_state.py` passed after the accepted review fixes (`quality` run #62 validate job success; `AI state check` run #20 success).
+- [x] Regular Chat reviewed PR #2; REV-001 and REV-002 were accepted, fixed, and no P0/P1/P2/P3 findings remain.
+
+### Validation
+
+```bash
+python scripts/check_ai_state.py
+credits-radar validate
+python -m unittest discover -s tests -v
+credits-radar review --output /tmp/catalog-review.md
+credits-radar eligibility --profile data/profile.example.json --json
+credits-radar inventory --inventory data/credits_inventory.example.json --json
+credits-radar route --inventory data/credits_inventory.example.json --tier A --json
+python scripts/ai_catalog_review.py --mode dry-run --output /tmp/ai-catalog-review.md
+```
+
+Provider smoke tests and AI invoke mode were intentionally not run for TASK-002.
