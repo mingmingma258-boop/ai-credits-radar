@@ -26,6 +26,31 @@ credits-radar list --access student --active-only
 credits-radar validate
 ```
 
+### 纵向原型
+
+当前原型在不自动调用任何 Provider 的情况下，把“目录 → 审查 → 资格初筛 → 已领取额度库存 → FREE_ONLY 路由”串起来：
+
+```bash
+# 1) 离线目录健康审查；不联网、不调用模型
+credits-radar review --output /tmp/catalog-review.md
+
+# 2) 用本地、非敏感 profile 做非权威资格初筛
+credits-radar eligibility --profile data/profile.example.json --json
+
+# 3) 检查本地 Credits Inventory
+credits-radar inventory --inventory data/credits_inventory.example.json --json
+
+# 4) 只从“已确认免费 + 已确认可用额度”中选择 Tier A+ 路由
+credits-radar route --inventory data/credits_inventory.example.json --tier A --json
+
+# 5) 生成 AI Catalog Review dry-run Artifact 内容；不会发送 Provider 请求
+python scripts/ai_catalog_review.py --mode dry-run --output /tmp/ai-catalog-review.md
+```
+
+`data/profile.example.json` 和 `data/credits_inventory.example.json` 都是**合成示例**，不代表真实个人资料或真实额度。实际使用时请复制为 `data/profile.local.json` / `data/credits_inventory.local.json`；这两个文件已被 `.gitignore` 排除。
+
+路由器默认 `FREE_ONLY` 且 fail-closed：`billing_state` 或 `quota_state` 为 `unknown` 时直接拒绝，不会把“看起来可能免费”当作免费，也没有付费 fallback。完整设计、领域模型、安全边界和后续路线图见 [`docs/PROTOTYPE.md`](docs/PROTOTYPE.md)。
+
 启动静态雷达页面：
 
 ```bash
@@ -76,17 +101,28 @@ CLI 的 `--status` 可把“仍公开”“有条件”和“先核验”分开�
 2. 打开 **Actions → Alibaba Cloud smoke test → Run workflow**，选择已经在百炼“免费额度”页面确认过的模型；默认示例为 `qwen-plus`。
 3. 工作流只在你手动点击 **Run workflow** 后调用一次，并且不会自动触发；日志不会打印 API Key。若控制台给出了业务空间专属 Base URL，可把它作为非敏感的 repository variable `DASHSCOPE_BASE_URL` 配置。
 
+另有 **Actions → AI catalog review**：默认 `dry-run`，只生成 Markdown Artifact；只有你明确把 `mode` 改成 `invoke` 时才会使用百炼。即使是 `invoke`，它也只输出审查 Artifact，不会修改 `data/programs.json` 或自动提交代码。运行 `invoke` 前仍需先在控制台确认该模型的免费额度、区域和“额度用完即停”等安全设置。
+
 脚本和工作流不会自动充值、订阅或升级付费。官方的 API Key、区域端点和调用示例以[获取 API Key 文档](https://help.aliyun.com/zh/model-studio/get-api-key)及[OpenAI 兼容 Chat 文档](https://help.aliyun.com/zh/model-studio/qwen-api-via-openai-chat-completions)为准。
 
 ## 项目结构
 
 ```text
-data/programs.json              # 可审计机会目录
-src/ai_credits_radar/           # Python CLI 与校验器
-scripts/aliyun_bailian_smoke_test.py  # 手动、最小化的百炼 API 连通性测试
-tests/                           # 标准库单元测试
-web/                             # 无构建步骤的静态浏览器页面
-docs/application-playbook.md    # 申请和交接边界
+data/programs.json                       # 可审计机会目录
+data/profile.example.json                # 合成资格初筛 profile 示例
+data/credits_inventory.example.json      # 合成 Credits Inventory 示例
+src/ai_credits_radar/catalog.py          # 目录读取/校验/筛选
+src/ai_credits_radar/review.py           # 离线目录审查
+src/ai_credits_radar/eligibility.py      # 非权威资格初筛
+src/ai_credits_radar/inventory.py        # 额度库存校验与汇总
+src/ai_credits_radar/routing.py          # fail-closed FREE_ONLY 路由
+src/ai_credits_radar/providers/          # Provider Adapter 契约/安全配置适配器
+scripts/aliyun_bailian_smoke_test.py     # 手动、最小化百炼 API 连通性测试
+scripts/ai_catalog_review.py             # dry-run 默认的 AI 目录审查 Artifact 生成器
+tests/                                   # 标准库单元与集成测试
+web/                                     # 无构建步骤的静态浏览器页面
+docs/application-playbook.md             # 申请和人工接管边界
+docs/PROTOTYPE.md                        # 完整产品设计与原型架构
 ```
 
 ## 贡献与维护
@@ -96,6 +132,11 @@ docs/application-playbook.md    # 申请和交接边界
 ```bash
 credits-radar validate
 python -m unittest discover -s tests -v
+credits-radar review --output /tmp/catalog-review.md
+credits-radar eligibility --profile data/profile.example.json --json
+credits-radar inventory --inventory data/credits_inventory.example.json --json
+credits-radar route --inventory data/credits_inventory.example.json --tier A --json
+python scripts/ai_catalog_review.py --mode dry-run --output /tmp/ai-catalog-review.md
 ```
 
-项目采用 MIT License。机会目录中的各项权益仍受对应供应商的服务条款和促销条款约束。
+上述验证全部是离线/本地控制流，不会调用 Provider。项目采用 MIT License。机会目录中的各项权益仍受对应供应商的服务条款和促销条款约束。
