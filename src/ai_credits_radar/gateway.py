@@ -12,6 +12,7 @@ from .providers.base import FreeQuotaExhausted, InvocationResult, ProviderAdapte
 from .routing import select_free_route
 
 MAX_GLOBAL_OUTPUT_TOKENS = 2048
+MAX_PROMPT_CHARS = 50000
 MAX_ATTESTATION_AGE_HOURS = 24
 SUPPORTED_PROVIDERS = {"aliyun-bailian"}
 
@@ -138,6 +139,8 @@ def invoke_free_only(
 ) -> dict[str, Any]:
     if not isinstance(prompt, str) or not prompt.strip():
         raise GatewaySafetyError("prompt must be non-empty")
+    if len(prompt) > MAX_PROMPT_CHARS:
+        raise GatewaySafetyError(f"prompt exceeds the {MAX_PROMPT_CHARS}-character FREE_ONLY safety cap")
     preflight = live_preflight(
         inventory,
         required_tier=required_tier,
