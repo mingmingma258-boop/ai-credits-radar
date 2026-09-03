@@ -66,11 +66,24 @@ CLI 的 `--status` 可把“仍公开”“有条件”和“先核验”分开�
 
 目录中的“官方页面可访问”不等于该机会一定对中国大陆账号开放。申请前应在供应商页面确认实际地区、运营主体、模型/服务可用性、付款要求和账号历史；不要用虚假地址、虚假学生身份、VPN 或重复账号规避地区与风控限制。微软全球 Azure 与“中国区 Azure（由 21Vianet 运营）”是分开的服务环境，学生邮箱能否通过验证也以页面实际结果为准。可先查看 [Azure for Students](https://azure.microsoft.com/en-us/free/students) 的学生要求与 [Azure 中国区](https://www.azure.cn/en-us/) 的服务说明。
 
+### 可选：安全使用阿里云百炼 Token
+
+目录中的 [Model Studio（百炼）新人免费额度](data/programs.json) 适合作为中国大陆个人开发者的低风险 API 试用入口。免费额度依赖地区、模型、新用户状态和账户规则，先在[百炼控制台](https://bailian.console.aliyun.com/)确认可用模型与剩余额度，并开启“免费额度用完即停”。
+
+仓库提供一个仅手动触发的最小连通性测试：
+
+1. 在 GitHub 仓库的 **Settings → Secrets and variables → Actions** 中新建 repository secret，名称必须是 `DASHSCOPE_API_KEY`；只在 GitHub 页面粘贴 Token，不要发送到聊天或提交到 Git。
+2. 打开 **Actions → Alibaba Cloud smoke test → Run workflow**，选择已经在百炼“免费额度”页面确认过的模型；默认示例为 `qwen-plus`。
+3. 工作流只在你手动点击 **Run workflow** 后调用一次，并且不会自动触发；日志不会打印 API Key。若控制台给出了业务空间专属 Base URL，可把它作为非敏感的 repository variable `DASHSCOPE_BASE_URL` 配置。
+
+脚本和工作流不会自动充值、订阅或升级付费。官方的 API Key、区域端点和调用示例以[获取 API Key 文档](https://help.aliyun.com/zh/model-studio/get-api-key)及[OpenAI 兼容 Chat 文档](https://help.aliyun.com/zh/model-studio/qwen-api-via-openai-chat-completions)为准。
+
 ## 项目结构
 
 ```text
 data/programs.json              # 可审计机会目录
 src/ai_credits_radar/           # Python CLI 与校验器
+scripts/aliyun_bailian_smoke_test.py  # 手动、最小化的百炼 API 连通性测试
 tests/                           # 标准库单元测试
 web/                             # 无构建步骤的静态浏览器页面
 docs/application-playbook.md    # 申请和交接边界
