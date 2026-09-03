@@ -90,7 +90,7 @@
       "duration": "Tier and account terms",
       "eligibility": ["startup", "Microsoft review", "eligible Azure customer"],
       "requirements": ["Microsoft account", "company/product information", "application review"],
-      "application_url": "https://www.microsoft.com/en-us/startups",
+      "application_url": "https://startups.microsoft.com/",
       "evidence_url": "https://learn.microsoft.com/en-us/startups/microsoft-for-startups/application",
       "evidence_type": "official-program-and-docs",
       "last_verified": "2026-09-03",
@@ -114,7 +114,7 @@
       "duration": "Initial credits 90 days; post-verification credits 180 days per the official page.",
       "eligibility": ["new Azure customer", "startup/business verification for the expanded amount"],
       "requirements": ["Azure account", "identity/payment verification may be requested", "business verification for additional credits"],
-      "application_url": "https://azure.microsoft.com/en-us/free/",
+      "application_url": "https://azure.microsoft.com/en-us/free/students/",
       "evidence_url": "https://azure.microsoft.com/en-us/free/students/",
       "evidence_type": "official-account-page",
       "last_verified": "2026-09-03",
@@ -558,4 +558,3 @@
     }
   ]
 }
-
