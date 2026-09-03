@@ -18,6 +18,8 @@ from .base import FreeQuotaExhausted, InvocationResult, ProviderAdapter, Provide
 DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DEFAULT_MODEL = "qwen-plus"
 MAX_OUTPUT_TOKENS = 2048
+MAX_THINKING_TOKENS = 4096
+MAX_TIMEOUT_SECONDS = 180
 
 
 class AliyunBailianAdapter(ProviderAdapter):
@@ -48,21 +50,13 @@ class AliyunBailianAdapter(ProviderAdapter):
         return ProviderCheck(True, "configured", f"Base URL configured: {self.base_url}")
 
     def check_quota(self) -> ProviderCheck:
-        return ProviderCheck(
-            False,
-            "unknown",
-            "The adapter cannot prove remaining free quota. FREE_ONLY gateway attestation is required before invocation.",
-        )
+        return ProviderCheck(False, "unknown", "The adapter cannot prove remaining free quota. FREE_ONLY gateway attestation is required before invocation.")
 
     def list_models(self) -> list[dict[str, Any]]:
         return [{"id": self.model, "tier": "Unknown", "source": "local configuration"}]
 
     def estimate_cost(self, *, model: str, max_tokens: int) -> ProviderCheck:
-        return ProviderCheck(
-            False,
-            "unknown",
-            f"Cost/free-quota status for model={model!r}, max_tokens={max_tokens} is not inferred by the adapter.",
-        )
+        return ProviderCheck(False, "unknown", f"Cost/free-quota status for model={model!r}, max_tokens={max_tokens} is not inferred by the adapter.")
 
     @staticmethod
     def _error_code(body: bytes) -> str | None:
@@ -87,7 +81,9 @@ class AliyunBailianAdapter(ProviderAdapter):
         model: str | None = None,
         max_tokens: int = 512,
         system: str | None = None,
-        timeout: int = 45,
+        timeout: int = 75,
+        enable_thinking: bool = False,
+        thinking_budget: int | None = None,
         gateway_authorized: bool = False,
     ) -> InvocationResult:
         if gateway_authorized is not True:
@@ -98,18 +94,28 @@ class AliyunBailianAdapter(ProviderAdapter):
             raise ProviderInvocationError(credential.detail)
         if not region.ok:
             raise ProviderInvocationError(region.detail)
+
         bounded_tokens = max(1, min(int(max_tokens), MAX_OUTPUT_TOKENS))
         selected_model = (model or self.model).strip() or self.model
         messages: list[dict[str, str]] = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        payload = {
+        payload: dict[str, Any] = {
             "model": selected_model,
             "messages": messages,
             "max_tokens": bounded_tokens,
             "temperature": 0.2,
+            # Hybrid-thinking models such as qwen3.8-max enable thinking by default.
+            # FREE_ONLY fast mode must therefore disable it explicitly.
+            "enable_thinking": bool(enable_thinking),
         }
+        if enable_thinking:
+            if thinking_budget is None:
+                thinking_budget = min(512, MAX_THINKING_TOKENS)
+            bounded_thinking = max(1, min(int(thinking_budget), MAX_THINKING_TOKENS))
+            payload["thinking_budget"] = bounded_thinking
+
         request = Request(
             f"{self.base_url}/chat/completions",
             data=json.dumps(payload).encode("utf-8"),
@@ -117,16 +123,14 @@ class AliyunBailianAdapter(ProviderAdapter):
             method="POST",
         )
         try:
-            with urlopen(request, timeout=max(1, min(int(timeout), 60))) as response:
+            with urlopen(request, timeout=max(1, min(int(timeout), MAX_TIMEOUT_SECONDS))) as response:
                 result = json.load(response)
                 request_id = response.headers.get("x-request-id")
         except HTTPError as exc:
             body = exc.read(32768)
             code = self._error_code(body)
             if exc.code == 403 and code == "AllocationQuota.FreeTierOnly":
-                raise FreeQuotaExhausted(
-                    "Alibaba FREE_ONLY quota is exhausted; provider stopped the request before paid fallback."
-                ) from exc
+                raise FreeQuotaExhausted("Alibaba FREE_ONLY quota is exhausted; provider stopped the request before paid fallback.") from exc
             raise ProviderInvocationError(f"Alibaba request failed with HTTP {exc.code}; response body withheld.") from exc
         except URLError as exc:
             raise ProviderInvocationError(f"Alibaba request could not connect: {exc.reason}") from exc

@@ -12,6 +12,7 @@ from .providers.base import FreeQuotaExhausted, InvocationResult, ProviderAdapte
 from .routing import select_free_route
 
 MAX_GLOBAL_OUTPUT_TOKENS = 2048
+MAX_GLOBAL_THINKING_TOKENS = 4096
 MAX_PROMPT_CHARS = 50000
 MAX_ATTESTATION_AGE_HOURS = 24
 SUPPORTED_PROVIDERS = {"aliyun-bailian"}
@@ -135,12 +136,20 @@ def invoke_free_only(
     usage_log: str | Path | None = None,
     system: str | None = None,
     now: datetime | None = None,
+    enable_thinking: bool = False,
+    thinking_budget: int | None = None,
     adapter_factory: Callable[[str, str], ProviderAdapter] | None = None,
 ) -> dict[str, Any]:
     if not isinstance(prompt, str) or not prompt.strip():
         raise GatewaySafetyError("prompt must be non-empty")
     if len(prompt) > MAX_PROMPT_CHARS:
         raise GatewaySafetyError(f"prompt exceeds the {MAX_PROMPT_CHARS}-character FREE_ONLY safety cap")
+    if thinking_budget is not None:
+        if not isinstance(thinking_budget, int) or isinstance(thinking_budget, bool) or not 1 <= thinking_budget <= MAX_GLOBAL_THINKING_TOKENS:
+            raise GatewaySafetyError(f"thinking_budget must be 1..{MAX_GLOBAL_THINKING_TOKENS}")
+        if not enable_thinking:
+            raise GatewaySafetyError("thinking_budget requires enable_thinking=true")
+
     preflight = live_preflight(
         inventory,
         required_tier=required_tier,
@@ -149,6 +158,8 @@ def invoke_free_only(
         now=now,
         dry_run=dry_run,
     )
+    preflight["thinking_mode"] = "reasoning" if enable_thinking else "fast"
+    preflight["thinking_budget"] = thinking_budget if enable_thinking else None
     if dry_run:
         return {"status": "dry_run", "preflight": preflight, "request_sent": False}
 
@@ -168,6 +179,8 @@ def invoke_free_only(
             model=str(preflight["model"]),
             max_tokens=int(preflight["max_output_tokens"]),
             system=system,
+            enable_thinking=enable_thinking,
+            thinking_budget=thinking_budget,
             gateway_authorized=True,
         )
     except FreeQuotaExhausted as exc:
@@ -182,7 +195,20 @@ def invoke_free_only(
         if usage_log:
             append_usage_log(usage_log, event)
         raise GatewaySafetyError(str(exc)) from exc
-    except ProviderInvocationError:
+    except ProviderInvocationError as exc:
+        event = {
+            "time": datetime.now(timezone.utc).isoformat(),
+            "started": started.isoformat(),
+            "status": "provider_error",
+            "provider_id": preflight["provider_id"],
+            "resource_id": preflight["resource_id"],
+            "model": preflight["model"],
+            "request_count": 1,
+            "usage": None,
+            "error": str(exc),
+        }
+        if usage_log:
+            append_usage_log(usage_log, event)
         raise
 
     event = {

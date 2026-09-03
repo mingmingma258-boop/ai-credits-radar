@@ -12,6 +12,7 @@ from pathlib import Path
 
 from ai_credits_radar.gateway import GatewaySafetyError
 from ai_credits_radar.inventory import load_inventory
+from ai_credits_radar.providers.base import ProviderInvocationError
 from ai_credits_radar.worker import load_worker_task, run_worker
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +42,9 @@ def _actions_state() -> tuple[dict[str, object], dict[str, object]]:
     model = os.environ.get("WORKER_MODEL", "qwen-plus").strip() or "qwen-plus"
     tier = os.environ.get("WORKER_MODEL_TIER", "A").strip() or "A"
     max_tokens = int(os.environ.get("WORKER_MAX_OUTPUT_TOKENS", "800"))
+    thinking_mode = os.environ.get("WORKER_THINKING_MODE", "fast").strip().casefold() or "fast"
+    thinking_budget_raw = os.environ.get("WORKER_THINKING_BUDGET", "").strip()
+    thinking_budget = int(thinking_budget_raw) if thinking_mode == "reasoning" and thinking_budget_raw else None
     confirmed_free = _bool_env("WORKER_FREE_QUOTA_CONFIRMED")
     stop_confirmed = _bool_env("WORKER_FREE_QUOTA_ONLY_CONFIRMED")
     expires_at = os.environ.get("WORKER_QUOTA_EXPIRES_AT", "").strip() or None
@@ -53,6 +57,8 @@ def _actions_state() -> tuple[dict[str, object], dict[str, object]]:
         "context_files": contexts,
         "tier": tier,
         "max_output_tokens": max_tokens,
+        "thinking_mode": thinking_mode,
+        "thinking_budget": thinking_budget,
     }
     inventory: dict[str, object] = {
         "schema_version": 1,
@@ -112,6 +118,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"HARD STOP: {exc}", file=sys.stderr)
         return 0 if args.dry_run else 3
+    except ProviderInvocationError as exc:
+        # run_worker has already written sanitized run/failure artifacts.
+        print(f"PROVIDER ERROR: {exc}", file=sys.stderr)
+        return 4
     print(json.dumps(metadata, ensure_ascii=False, indent=2))
     return 0
 
