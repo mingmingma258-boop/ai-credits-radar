@@ -8,16 +8,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .catalog import (
-    DEFAULT_DATA_PATH,
-    filter_programs,
-    load_catalog,
-    programs_from,
-    summary,
-    validate_catalog,
-)
+from .catalog import DEFAULT_DATA_PATH, filter_programs, load_catalog, programs_from, summary, validate_catalog
 from .eligibility import assess_catalog, load_profile
+from .gateway import GatewaySafetyError, invoke_free_only
 from .inventory import inventory_summary, load_inventory
+from .providers.base import ProviderInvocationError
 from .review import audit_catalog, render_markdown
 from .routing import select_free_route
 
@@ -49,7 +44,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     summary_parser = subparsers.add_parser("summary", help="show catalog counts")
     _common_filters(summary_parser)
-
     validate_parser = subparsers.add_parser("validate", help="validate the catalog schema and links")
     _common_filters(validate_parser)
 
@@ -74,6 +68,16 @@ def build_parser() -> argparse.ArgumentParser:
     route_parser.add_argument("--tier", choices=["B", "A", "S"], default="A")
     route_parser.add_argument("--resource", dest="resource_type", default="api")
     route_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    invoke_parser = subparsers.add_parser("invoke", help="send one safety-gated FREE_ONLY model request")
+    invoke_parser.add_argument("--inventory", type=Path, required=True)
+    invoke_parser.add_argument("--tier", choices=["B", "A", "S"], default="A")
+    invoke_parser.add_argument("--resource", dest="resource_type", default="api")
+    invoke_parser.add_argument("--prompt", required=True)
+    invoke_parser.add_argument("--max-tokens", type=int, default=512)
+    invoke_parser.add_argument("--usage-log", type=Path, default=Path("data/usage.local.jsonl"))
+    invoke_parser.add_argument("--dry-run", action="store_true")
+    invoke_parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
 
@@ -94,10 +98,7 @@ def _print_records(records: list[dict[str, Any]], as_json: bool = False) -> None
     for program in records:
         maximum = program.get("amount_usd_max")
         display_amount = str(program.get("amount_display") or (f"${maximum:,.0f}" if maximum is not None else "—"))
-        print(
-            f"{program['id'][:32]:32} {program['kind'][:10]:10} "
-            f"{program['status'][:18]:18} {display_amount:>28}  {program['name']}"
-        )
+        print(f"{program['id'][:32]:32} {program['kind'][:10]:10} {program['status'][:18]:18} {display_amount:>28}  {program['name']}")
 
 
 def _print_eligibility(results: list[dict[str, Any]]) -> None:
@@ -110,7 +111,7 @@ def _print_eligibility(results: list[dict[str, Any]]) -> None:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
-    if args.command in {"inventory", "route"}:
+    if args.command in {"inventory", "route", "invoke"}:
         try:
             inventory = load_inventory(args.inventory)
         except (FileNotFoundError, ValueError) as exc:
@@ -124,19 +125,54 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Resources: {result['total']}")
                 print(f"Available: {result['available']}")
                 print(f"Confirmed safe/free: {result['confirmed_safe_free']}")
+                print(f"Live-attested: {result['live_attested']}")
                 print(f"Unknown billing: {result['unknown_billing']}")
                 print(f"Unknown quota: {result['unknown_quota']}")
                 print(f"Expiring soon: {', '.join(result['expiring_soon']) or 'none'}")
             return 0
-        result = select_free_route(inventory, required_tier=args.tier, resource_type=args.resource_type)
+        if args.command == "route":
+            result = select_free_route(inventory, required_tier=args.tier, resource_type=args.resource_type)
+            if args.as_json:
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            elif result["status"] == "selected":
+                print(f"FREE_ONLY route: {result['provider']} / {result['model']} (Tier {result['tier']})")
+                print(f"Resource: {result['resource_id']} — expires {result.get('expires_at') or 'not specified'}")
+            else:
+                print(f"HARD STOP: {result['reason']}")
+            return 0 if result["status"] == "selected" else 3
+        try:
+            result = invoke_free_only(
+                inventory,
+                prompt=args.prompt,
+                required_tier=args.tier,
+                resource_type=args.resource_type,
+                max_tokens=args.max_tokens,
+                dry_run=args.dry_run,
+                usage_log=None if args.dry_run else args.usage_log,
+            )
+        except GatewaySafetyError as exc:
+            payload = {"status": "hard_stop", "reason": str(exc), "request_sent": False}
+            if args.as_json:
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
+            else:
+                print(f"HARD STOP: {exc}")
+            return 3
+        except ProviderInvocationError as exc:
+            payload = {"status": "provider_error", "reason": str(exc)}
+            if args.as_json:
+                print(json.dumps(payload, ensure_ascii=False, indent=2))
+            else:
+                print(f"PROVIDER ERROR: {exc}")
+            return 4
         if args.as_json:
             print(json.dumps(result, ensure_ascii=False, indent=2))
-        elif result["status"] == "selected":
-            print(f"FREE_ONLY route: {result['provider']} / {result['model']} (Tier {result['tier']})")
-            print(f"Resource: {result['resource_id']} — expires {result.get('expires_at') or 'not specified'}")
+        elif result["status"] == "dry_run":
+            preflight = result["preflight"]
+            print(f"DRY RUN: {preflight['provider']} / {preflight['model']} (Tier {preflight['tier']}); no request sent")
         else:
-            print(f"HARD STOP: {result['reason']}")
-        return 0 if result["status"] == "selected" else 3
+            print(result["content"])
+            print(f"\n[FREE_ONLY provider={result['preflight']['provider_id']} model={result['model']}]", file=sys.stderr)
+        return 0
 
     try:
         catalog, programs = _load(args.data)
@@ -152,11 +188,9 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"Catalog valid: {len(programs)} records")
         return 0
-
     if args.command == "summary":
         print(json.dumps(summary(programs), ensure_ascii=False, indent=2))
         return 0
-
     if args.command == "review":
         report = audit_catalog(catalog, stale_days=args.stale_days)
         markdown = render_markdown(report)
@@ -170,7 +204,6 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(markdown)
         return 0 if not report["validation_errors"] else 1
-
     if args.command == "eligibility":
         try:
             profile = load_profile(args.profile)
@@ -185,7 +218,6 @@ def main(argv: list[str] | None = None) -> int:
         else:
             _print_eligibility(results)
         return 0
-
     if args.command == "search":
         records = filter_programs(programs, query=args.query, sort_by=args.sort)
         _print_records(records, args.as_json)
