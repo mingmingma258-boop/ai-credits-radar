@@ -17,6 +17,9 @@ from ai_credits_radar.review import audit_catalog, render_markdown
 from ai_credits_radar.routing import select_free_route
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 class ReviewTests(unittest.TestCase):
     def test_current_catalog_renders_offline_review(self):
         report = audit_catalog(load_catalog(DEFAULT_DATA_PATH), today=date(2026, 9, 3))
@@ -28,6 +31,19 @@ class ReviewTests(unittest.TestCase):
 
 
 class EligibilityTests(unittest.TestCase):
+    def setUp(self):
+        self.profile = {
+            "region": "CN",
+            "student": True,
+            "independent_developer": True,
+            "startup": False,
+            "researcher": True,
+            "has_student_email": True,
+            "has_github": True,
+            "allow_payment_method": False,
+            "accept_identity_verification": True,
+        }
+
     def test_profile_rejects_unknown_sensitive_style_fields(self):
         errors = validate_profile({"region": "CN", "student": True, "name": "Example"})
         self.assertTrue(any("unsupported profile fields" in error for error in errors))
@@ -47,20 +63,47 @@ class EligibilityTests(unittest.TestCase):
             "application_url": "https://example.com/apply",
             "evidence_url": "https://example.com/terms",
         }
-        profile = {
-            "region": "CN",
-            "student": True,
-            "independent_developer": True,
-            "startup": False,
-            "researcher": True,
-            "has_student_email": True,
-            "has_github": True,
-            "allow_payment_method": False,
-            "accept_identity_verification": True,
-        }
-        result = assess_program(program, profile)
+        result = assess_program(program, self.profile)
         self.assertEqual(result["decision"], "not_match")
         self.assertFalse(result["authoritative"])
+
+    def test_no_credit_card_required_does_not_create_payment_warning(self):
+        program = {
+            "id": "student-no-card",
+            "provider": "Example",
+            "name": "Student credits",
+            "kind": "student",
+            "access": "student",
+            "eligibility": ["full-time university student"],
+            "requirements": ["academic email", "student verification"],
+            "tags": ["student"],
+            "handoff": "verification-or-identity",
+            "status": "active",
+            "payment_note": "No credit card is required for eligible students.",
+            "application_url": "https://example.com/apply",
+            "evidence_url": "https://example.com/terms",
+        }
+        result = assess_program(program, self.profile)
+        self.assertFalse(any("payment/card verification" in warning for warning in result["warnings"]))
+
+    def test_explicit_payment_verification_still_creates_warning(self):
+        program = {
+            "id": "payment-check",
+            "provider": "Example",
+            "name": "Trial credits",
+            "kind": "trial",
+            "access": "account-signup",
+            "eligibility": ["new user"],
+            "requirements": ["payment verification may be requested"],
+            "tags": ["trial"],
+            "handoff": "login",
+            "status": "active",
+            "payment_note": "Review billing before use.",
+            "application_url": "https://example.com/apply",
+            "evidence_url": "https://example.com/terms",
+        }
+        result = assess_program(program, self.profile)
+        self.assertTrue(any("payment/card verification" in warning for warning in result["warnings"]))
 
 
 class InventoryAndRoutingTests(unittest.TestCase):
@@ -134,6 +177,14 @@ class AdapterTests(unittest.TestCase):
         with patch.dict(os.environ, {"DASHSCOPE_API_KEY": "hidden-value"}, clear=False):
             adapter = AliyunBailianAdapter.from_env()
             self.assertNotIn("hidden-value", adapter.check_credentials().detail)
+
+
+class WorkflowSafetyTests(unittest.TestCase):
+    def test_ai_review_model_input_is_not_interpolated_in_shell(self):
+        workflow = (ROOT / ".github" / "workflows" / "ai-catalog-review.yml").read_text(encoding="utf-8")
+        self.assertIn("DASHSCOPE_MODEL: ${{ inputs.model }}", workflow)
+        self.assertNotIn('--model "${{ inputs.model }}"', workflow)
+        self.assertIn("DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}", workflow)
 
 
 class CliIntegrationTests(unittest.TestCase):
