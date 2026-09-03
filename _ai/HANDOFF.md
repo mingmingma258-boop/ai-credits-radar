@@ -21,12 +21,14 @@
 ## Validation performed
 
 - Existing repository structure, README, quality CI, workflows, and scripts were read before bootstrap changes.
+- Main-to-task diff confirms only 11 new coordination/workflow files were added; no pre-existing product file was modified.
+- PR #1 was opened from `task/TASK-001-bootstrap-ai-workflow` to `main`.
 - No provider API call, secret read/write, login, verification, payment, application, or external account action was performed.
 
 ## Validation not performed
 
-- Final `python scripts/check_ai_state.py` CI result is pending.
-- Existing `quality` CI result on the final bootstrap PR is pending.
+- Final `python scripts/check_ai_state.py` CI result is pending on the synchronized PR head.
+- Existing `quality` CI result on the synchronized PR head is pending.
 - Alibaba smoke test is intentionally not run because provider API calls are out of scope for this task.
 
 ## Known limitations
@@ -37,13 +39,13 @@
 
 ## Follow-up items
 
-- Open the bootstrap PR and write the PR reference back here.
-- Wait for AI-state and existing quality CI.
+- Wait for AI-state and existing quality CI on PR #1.
 - Perform Regular Chat Review of the actual diff.
-- Human decides whether to merge.
+- Mark TASK-001 DONE only after required CI/review is satisfied.
+- Human decides whether to merge PR #1.
 - After merge, perform a read-only gap audit and define the first real product `CODE` task; current leading candidate is Manual AI Catalog Review v1, subject to audit.
 
 ## Commit / PR
 
 - Task branch: `task/TASK-001-bootstrap-ai-workflow`
-- PR/reference: pending creation
+- PR: #1 — Bootstrap P001 AI workflow state
