@@ -165,6 +165,7 @@ def invoke_free_only(
             model=str(preflight["model"]),
             max_tokens=int(preflight["max_output_tokens"]),
             system=system,
+            gateway_authorized=True,
         )
     except FreeQuotaExhausted as exc:
         event = {
