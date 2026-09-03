@@ -8,15 +8,9 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 
 from ai_credits_radar.gateway import GatewaySafetyError, invoke_free_only, live_preflight
-from ai_credits_radar.inventory import load_inventory, validate_inventory
+from ai_credits_radar.inventory import load_inventory
 from ai_credits_radar.providers.aliyun import AliyunBailianAdapter
-from ai_credits_radar.providers.base import (
-    FreeQuotaExhausted,
-    InvocationResult,
-    ProviderAdapter,
-    ProviderCheck,
-    ProviderInvocationError,
-)
+from ai_credits_radar.providers.base import FreeQuotaExhausted, InvocationResult, ProviderAdapter, ProviderCheck, ProviderInvocationError
 from ai_credits_radar.worker import build_worker_prompt, run_worker, validate_worker_task
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +56,7 @@ class FakeAdapter(ProviderAdapter):
     def __init__(self, *, exhausted=False):
         self.calls = 0
         self.exhausted = exhausted
+        self.assert_authorized = False
 
     def check_credentials(self):
         return ProviderCheck(True, "configured", "fake")
@@ -106,6 +101,16 @@ class GatewayTests(unittest.TestCase):
         stale = (datetime.now(timezone.utc) - timedelta(hours=30)).isoformat()
         with self.assertRaisesRegex(GatewaySafetyError, "stale"):
             live_preflight(safe_inventory(confirmed_at=stale))
+
+    def test_oversized_prompt_stops_before_adapter(self):
+        adapter = FakeAdapter()
+        with self.assertRaisesRegex(GatewaySafetyError, "character FREE_ONLY safety cap"):
+            invoke_free_only(
+                safe_inventory(),
+                prompt="x" * 50001,
+                adapter_factory=lambda provider_id, model: adapter,
+            )
+        self.assertEqual(adapter.calls, 0)
 
     def test_gateway_sends_exactly_one_mocked_request(self):
         adapter = FakeAdapter()
@@ -161,6 +166,18 @@ class WorkerTests(unittest.TestCase):
         }
         self.assertEqual(validate_worker_task(task), [])
         with self.assertRaisesRegex(ValueError, "unsafe context path"):
+            build_worker_prompt(task, repo_root=ROOT)
+
+    def test_worker_rejects_local_private_context_even_when_allowlisted(self):
+        task = {
+            "project": "P001",
+            "task_id": "TEST",
+            "goal": "review",
+            "context_files": ["data/profile.local.json"],
+            "tier": "A",
+            "max_output_tokens": 100,
+        }
+        with self.assertRaisesRegex(ValueError, "local/private"):
             build_worker_prompt(task, repo_root=ROOT)
 
     def test_worker_dry_run_writes_artifacts_without_provider(self):
