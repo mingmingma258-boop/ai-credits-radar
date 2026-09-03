@@ -1,4 +1,4 @@
-"""Provider adapter contracts for future real integrations."""
+"""Provider adapter contracts for safety-gated integrations."""
 
 from __future__ import annotations
 
@@ -14,13 +14,31 @@ class ProviderCheck:
     detail: str
 
 
+@dataclass(frozen=True)
+class InvocationResult:
+    content: str
+    model: str
+    usage: dict[str, Any]
+    provider_request_id: str | None = None
+
+
+class ProviderInvocationError(RuntimeError):
+    """A sanitized provider invocation failure."""
+
+
+class FreeQuotaExhausted(ProviderInvocationError):
+    """Provider explicitly stopped because FREE_ONLY quota is exhausted."""
+
+
 class ProviderAdapter(ABC):
     """Safety-oriented provider contract.
 
-    Implementations must not interpret unknown cost/quota state as free.
+    Implementations must not interpret unknown cost/quota state as free and
+    must not retry billable/provider requests implicitly.
     """
 
     name: str
+    provider_id: str
 
     @abstractmethod
     def check_credentials(self) -> ProviderCheck:
@@ -43,7 +61,7 @@ class ProviderAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def invoke(self, **kwargs: Any) -> Any:
+    def invoke(self, **kwargs: Any) -> InvocationResult:
         raise NotImplementedError
 
     @abstractmethod
