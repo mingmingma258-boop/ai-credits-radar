@@ -57,7 +57,7 @@ No provider smoke test was required or permitted for this bootstrap task.
 ## TASK-002 — Build safe end-to-end prototype
 
 - **Project:** P001
-- **Status:** READY
+- **Status:** IN_PROGRESS
 - **Work type:** CODE
 - **Owner:** human
 - **Executor:** bounded repository executor
