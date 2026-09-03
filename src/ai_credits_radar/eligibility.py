@@ -18,6 +18,20 @@ ALLOWED_PROFILE_FIELDS = {
     "accept_identity_verification",
 }
 
+PAYMENT_SIGNAL_TOKENS = ("credit card", "payment method", "billing verification", "payment verification")
+NO_PAYMENT_PHRASES = (
+    "no credit card required",
+    "no credit card is required",
+    "credit card is not required",
+    "without a credit card",
+    "no card required",
+    "no card is required",
+    "no payment method required",
+    "no payment method is required",
+    "payment method is not required",
+    "without a payment method",
+)
+
 
 def load_profile(path: str | Path) -> dict[str, Any]:
     source = Path(path)
@@ -46,8 +60,8 @@ def validate_profile(profile: Any) -> list[str]:
     return errors
 
 
-def _text(program: dict[str, Any]) -> str:
-    values: list[str] = [
+def _text_fragments(program: dict[str, Any]) -> list[str]:
+    fragments: list[str] = [
         str(program.get("kind", "")),
         str(program.get("access", "")),
         str(program.get("provider", "")),
@@ -55,9 +69,31 @@ def _text(program: dict[str, Any]) -> str:
     for field in ("eligibility", "requirements", "tags"):
         value = program.get(field, [])
         if isinstance(value, list):
-            values.extend(str(item) for item in value)
-    values.extend([str(program.get("payment_note", "")), str(program.get("caution", ""))])
-    return " ".join(values).casefold()
+            fragments.extend(str(item) for item in value)
+    fragments.extend([str(program.get("payment_note", "")), str(program.get("caution", ""))])
+    return [fragment.casefold() for fragment in fragments if fragment]
+
+
+def _text(program: dict[str, Any]) -> str:
+    return " ".join(_text_fragments(program))
+
+
+def _payment_step_may_be_required(program: dict[str, Any]) -> bool:
+    """Return True only for non-negated payment/card signals.
+
+    The catalog can explicitly state that no credit card is required. Treating the
+    phrase merely as a `credit card` keyword would invert a core eligibility fact.
+    Each fragment is evaluated independently so a separate positive requirement
+    still wins when another fragment says that a different payment step is absent.
+    """
+
+    for fragment in _text_fragments(program):
+        if not any(token in fragment for token in PAYMENT_SIGNAL_TOKENS):
+            continue
+        if any(phrase in fragment for phrase in NO_PAYMENT_PHRASES):
+            continue
+        return True
+    return False
 
 
 def assess_program(program: dict[str, Any], profile: dict[str, Any]) -> dict[str, Any]:
@@ -87,9 +123,8 @@ def assess_program(program: dict[str, Any], profile: dict[str, Any]) -> dict[str
     if "research" in text and profile.get("researcher", False):
         positives.append("research-oriented language aligns with the profile")
 
-    if any(token in text for token in ("credit card", "payment method", "billing verification", "payment verification")):
-        if not profile.get("allow_payment_method", False):
-            warnings.append("payment/card verification may be requested and profile disallows payment-method steps")
+    if _payment_step_may_be_required(program) and not profile.get("allow_payment_method", False):
+        warnings.append("payment/card verification may be requested and profile disallows payment-method steps")
     if program.get("handoff") in {"verification-or-identity", "application-review", "login", "partner-code"}:
         warnings.append(f"human takeover expected: {program.get('handoff')}")
     if program.get("handoff") == "verification-or-identity" and not profile.get("accept_identity_verification", False):
