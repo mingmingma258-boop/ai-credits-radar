@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "example": true,
+  "profile": {
+    "region": "CN",
+    "student": true,
+    "independent_developer": true,
+    "startup": false,
+    "researcher": true,
+    "has_student_email": true,
+    "has_github": true,
+    "allow_payment_method": false,
+    "accept_identity_verification": true
+  }
+}

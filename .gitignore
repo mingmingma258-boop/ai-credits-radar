@@ -8,3 +8,7 @@ build/
 *.egg-info/
 .DS_Store
 
+# Local P001 state — never commit real profile, balances, or generated review artifacts.
+data/profile.local.json
+data/credits_inventory.local.json
+artifacts/
