@@ -1,10 +1,12 @@
 # AI Credits Radar
 
+[![quality](https://github.com/mingmingma258-boop/ai-credits-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/mingmingma258-boop/ai-credits-radar/actions/workflows/ci.yml)
+
 一个可审计的 AI API、GPU 与云 credits 机会雷达。
 
 AI Credits Radar 把“免费层”“一次性试用额度”“需要审核的 startup credits”与“合作方/学生专属权益”分开记录，并为每条记录保留官方页面、核验日期、申请方式和风险提示。项目不代替用户创建账号、不保存 API key、不绕过验证，也不会在没有明确确认的情况下升级付费方案。
 
-> 当前目录是从空的 GitHub 仓库恢复出的可运行基线。如果你手头还有 `ai-credits-radar-v2.zip`，可以作为后续合并和比对的输入；本版本不会假装已经拥有压缩包中的历史内容。
+> 初始版本是在空的 GitHub 仓库基础上恢复出的可运行基线；后续历史版本可按贡献流程比对合并，仓库中已提交的文件是当前事实来源。
 
 ## 快速开始
 
@@ -76,4 +78,3 @@ python -m unittest discover -s tests -v
 ```
 
 项目采用 MIT License。机会目录中的各项权益仍受对应供应商的服务条款和促销条款约束。
-
