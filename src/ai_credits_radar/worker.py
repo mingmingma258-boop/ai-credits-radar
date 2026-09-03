@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .gateway import invoke_free_only
+from .providers.base import ProviderInvocationError
 
 MAX_CONTEXT_FILES = 8
 MAX_CONTEXT_CHARS = 30000
@@ -60,6 +61,16 @@ def validate_worker_task(task: Any) -> list[str]:
     tier = task.get("tier", "A")
     if tier not in {"B", "A", "S"}:
         errors.append("tier must be B, A, or S")
+    thinking_mode = task.get("thinking_mode", "fast")
+    if thinking_mode not in {"fast", "reasoning"}:
+        errors.append("thinking_mode must be fast or reasoning")
+    thinking_budget = task.get("thinking_budget")
+    if thinking_budget is not None and (
+        not isinstance(thinking_budget, int) or isinstance(thinking_budget, bool) or not 1 <= thinking_budget <= 4096
+    ):
+        errors.append("thinking_budget must be null or an integer from 1 to 4096")
+    if thinking_mode == "fast" and thinking_budget is not None:
+        errors.append("fast mode must not set thinking_budget")
     return errors
 
 
@@ -112,6 +123,10 @@ def build_worker_prompt(task: dict[str, Any], *, repo_root: str | Path) -> tuple
     return prompt, used
 
 
+def _write_metadata(target: Path, metadata: dict[str, Any]) -> None:
+    (target / "run.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def run_worker(
     task: dict[str, Any],
     inventory: dict[str, Any],
@@ -127,25 +142,55 @@ def run_worker(
     prompt, context_files = build_worker_prompt(task, repo_root=repo_root)
     target = Path(output_dir)
     target.mkdir(parents=True, exist_ok=True)
-    result = invoke_free_only(
-        inventory,
-        prompt=prompt,
-        required_tier=str(task.get("tier", "A")),
-        resource_type="api",
-        max_tokens=int(task.get("max_output_tokens", 800)),
-        dry_run=dry_run,
-        usage_log=usage_log,
-        system="You produce reviewable development artifacts only. Never claim to have modified the repository.",
-    )
-    metadata = {
+    thinking_mode = str(task.get("thinking_mode", "fast"))
+    thinking_budget = task.get("thinking_budget")
+
+    pending = {
         "project": "P001",
         "task_id": task.get("task_id"),
         "dry_run": dry_run,
         "context_files": context_files,
+        "thinking_mode": thinking_mode,
+        "thinking_budget": thinking_budget,
+        "gateway_status": "pending",
+    }
+    _write_metadata(target, pending)
+
+    try:
+        result = invoke_free_only(
+            inventory,
+            prompt=prompt,
+            required_tier=str(task.get("tier", "A")),
+            resource_type="api",
+            max_tokens=int(task.get("max_output_tokens", 800)),
+            dry_run=dry_run,
+            usage_log=usage_log,
+            system="You produce reviewable development artifacts only. Never claim to have modified the repository.",
+            enable_thinking=thinking_mode == "reasoning",
+            thinking_budget=int(thinking_budget) if thinking_budget is not None else None,
+        )
+    except ProviderInvocationError as exc:
+        failed = {
+            **pending,
+            "gateway_status": "provider_error",
+            "error": str(exc),
+            "request_may_have_been_sent": True,
+        }
+        _write_metadata(target, failed)
+        (target / "failure.md").write_text(
+            "# Provider call failed\n\nThe FREE_ONLY worker did not receive a usable model response. "
+            "A provider request may already have consumed free quota, so do not automatically retry.\n\n"
+            f"Sanitized error: `{exc}`\n",
+            encoding="utf-8",
+        )
+        raise
+
+    metadata = {
+        **pending,
         "gateway_status": result.get("status"),
         "preflight": result.get("preflight"),
     }
-    (target / "run.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _write_metadata(target, metadata)
     if dry_run:
         (target / "prompt-preview.md").write_text(prompt + "\n", encoding="utf-8")
     else:
