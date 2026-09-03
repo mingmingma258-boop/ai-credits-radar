@@ -24,32 +24,38 @@ _No P0/P1/P2/P3 findings. The PR adds only the approved coordination/workflow la
 - Project: P001
 - Task: TASK-002 — Build safe end-to-end prototype
 - Commit / PR: PR #2 (`task/TASK-002-vertical-prototype` → `main`)
-- Reviewed implementation head: `be1a5586910d8789f41e1c2a9b9f5a5d423b608d`
+- Initial reviewed implementation head: `be1a5586910d8789f41e1c2a9b9f5a5d423b608d`
+- Reviewed fix head: `2899d4ead96b1f19068e3db649e784b5472117ee`
 - Reviewer: Regular Chat
 - Date: 2026-09-03
-- CI observed before review fixes: `quality` run #54 = `success`; `AI state check` run #16 = `success`
+- CI before findings: `quality` run #54 = `success`; `AI state check` run #16 = `success`
+- Review-fix validation: `quality` run #62 job `validate` = `success` including tests and offline prototype flow; `AI state check` run #20 = `success`
 
 ## Findings
 
 ### REV-001 — Workflow model input is interpolated into shell script
 
-- **Status:** ACCEPTED
+- **Status:** FIXED
 - **Severity:** P2
-- **Evidence:** `.github/workflows/ai-catalog-review.yml` passes `--model "${{ inputs.model }}"` inside `run:` shell blocks for both dry-run and invoke paths.
-- **Problem:** A free-text workflow-dispatch input is substituted into a shell program before execution. Shell metacharacters or command substitution in that input could be interpreted by the runner instead of being treated purely as model data.
-- **Impact:** A manually triggered workflow could execute unintended shell commands under the workflow runner context; invoke mode also has access to the provider secret in its step.
-- **Requested fix:** Do not interpolate the model input into `run:`. Keep it in the Actions `env` channel (`DASHSCOPE_MODEL`) and let the Python script read its existing environment-backed default.
-- **Acceptance check:** Workflow `run:` blocks contain no `${{ inputs.model }}` interpolation, while model selection still reaches the script through `DASHSCOPE_MODEL`; CI remains green.
+- **Evidence:** Initial `.github/workflows/ai-catalog-review.yml` passed `--model "${{ inputs.model }}"` inside `run:` shell blocks.
+- **Problem:** A free-text workflow-dispatch input was substituted into a shell program before execution.
+- **Impact:** Shell metacharacters could be interpreted by the runner; invoke mode also has access to the provider secret in its step.
+- **Resolution:** Removed the input from shell command text. Model choice now reaches the script only through the Actions environment variable `DASHSCOPE_MODEL`; the provider secret remains scoped only to the explicit invoke step. Added a static workflow safety regression test.
+- **Acceptance check:** `tests/test_prototype.py` asserts the environment mapping exists and `--model "${{ inputs.model }}"` does not; quality run #62 succeeded.
 
 ### REV-002 — Explicit “no credit card required” text produces a payment warning
 
-- **Status:** ACCEPTED
+- **Status:** FIXED
 - **Severity:** P2
-- **Evidence:** `src/ai_credits_radar/eligibility.py` warns whenever combined catalog text contains `credit card` or `payment method`, without recognizing negated phrases. Existing catalog records include wording such as “no credit card is required”.
-- **Problem:** The heuristic can invert a key eligibility/safety fact and report that payment/card verification may be requested even when the catalog explicitly says no card is required.
-- **Impact:** The user can receive misleading triage on a core product preference (no-card/free-first opportunities), reducing trust in eligibility ranking.
-- **Requested fix:** Add conservative negation handling for explicit no-card/no-payment-method phrases before emitting the payment warning, and add a regression test.
-- **Acceptance check:** A synthetic program containing “no credit card is required” does not emit the payment/card warning, while positive payment-required wording still can.
+- **Evidence:** Initial `eligibility.py` matched any `credit card` / `payment method` phrase without recognizing explicit negation.
+- **Problem:** The heuristic could invert a key no-card fact.
+- **Impact:** Core free/no-card opportunity triage could become misleading.
+- **Resolution:** Payment signals are now evaluated per catalog text fragment with conservative no-card/no-payment-method negation handling. A separate explicit positive payment requirement still triggers a warning.
+- **Acceptance check:** Regression tests cover both `No credit card is required` (no payment warning) and `payment verification may be requested` (warning retained); quality run #62 succeeded.
+
+### Final review result
+
+_No remaining P0/P1/P2/P3 findings after the accepted fixes. The reviewed prototype preserves existing catalog behavior, keeps provider use opt-in, maintains human takeover boundaries, and implements FREE_ONLY routing as a fail-closed local control plane rather than a paid or uncertain fallback._
 
 ## Finding template
 
