@@ -7,9 +7,7 @@ on:
         description: "dry-run never reads the provider secret; invoke sends exactly one bounded request"
         required: true
         type: choice
-        options:
-          - dry-run
-          - invoke
+        options: [dry-run, invoke]
         default: dry-run
       task_text:
         description: "Bounded task for the model; output is an artifact only"
@@ -22,20 +20,27 @@ on:
       model:
         description: "Model whose free quota you confirmed in the Model Studio console"
         required: true
-        default: "qwen-plus"
+        default: "qwen3.8-max"
       model_tier:
         description: "Manual capability tier fact for routing; not benchmark-derived yet"
         required: true
         type: choice
-        options:
-          - B
-          - A
-          - S
+        options: [B, A, S]
         default: A
-      max_output_tokens:
-        description: "Hard output-token cap; repository maximum is 2048"
+      thinking_mode:
+        description: "fast explicitly disables model thinking; reasoning enables bounded thinking"
         required: true
-        default: "800"
+        type: choice
+        options: [fast, reasoning]
+        default: fast
+      thinking_budget:
+        description: "Reasoning-token budget when thinking_mode=reasoning; ignored in fast mode"
+        required: true
+        default: "256"
+      max_output_tokens:
+        description: "Hard answer/output-token cap; repository maximum is 2048"
+        required: true
+        default: "200"
       quota_expires_at:
         description: "Optional free-quota expiry date from console (YYYY-MM-DD)"
         required: false
@@ -72,6 +77,8 @@ jobs:
           WORKER_CONTEXT_FILES: ${{ inputs.context_files }}
           WORKER_MODEL: ${{ inputs.model }}
           WORKER_MODEL_TIER: ${{ inputs.model_tier }}
+          WORKER_THINKING_MODE: ${{ inputs.thinking_mode }}
+          WORKER_THINKING_BUDGET: ${{ inputs.thinking_budget }}
           WORKER_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
           WORKER_QUOTA_EXPIRES_AT: ${{ inputs.quota_expires_at }}
           WORKER_FREE_QUOTA_CONFIRMED: ${{ inputs.free_quota_confirmed }}
@@ -81,7 +88,8 @@ jobs:
       - name: Reject live mode without both confirmations
         if: ${{ inputs.mode == 'invoke' && (!inputs.free_quota_confirmed || !inputs.free_quota_only_confirmed) }}
         run: |
-          echo "HARD STOP: live mode requires current free quota and Free Quota Only confirmations." >&2
+          mkdir -p artifacts/free-ai-worker
+          echo '{"status":"hard_stop","reason":"live mode requires current free quota and Free Quota Only confirmations"}' > artifacts/free-ai-worker/hard-stop.json
           exit 1
 
       - name: Run one FREE_ONLY worker request
@@ -93,6 +101,8 @@ jobs:
           WORKER_CONTEXT_FILES: ${{ inputs.context_files }}
           WORKER_MODEL: ${{ inputs.model }}
           WORKER_MODEL_TIER: ${{ inputs.model_tier }}
+          WORKER_THINKING_MODE: ${{ inputs.thinking_mode }}
+          WORKER_THINKING_BUDGET: ${{ inputs.thinking_budget }}
           WORKER_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
           WORKER_QUOTA_EXPIRES_AT: ${{ inputs.quota_expires_at }}
           WORKER_FREE_QUOTA_CONFIRMED: "true"
