@@ -39,7 +39,6 @@ jobs:
           mkdir -p artifacts
           python scripts/ai_catalog_review.py \
             --mode dry-run \
-            --model "${{ inputs.model }}" \
             --output artifacts/catalog-review.md
       - name: Generate AI review artifact
         if: ${{ inputs.mode == 'invoke' }}
@@ -49,7 +48,6 @@ jobs:
           mkdir -p artifacts
           python scripts/ai_catalog_review.py \
             --mode invoke \
-            --model "${{ inputs.model }}" \
             --output artifacts/catalog-review.md
       - name: Upload review artifact
         uses: actions/upload-artifact@v4
