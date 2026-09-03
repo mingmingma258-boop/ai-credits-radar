@@ -2,7 +2,7 @@
 
 ## Current phase
 
-TASK_002_REVIEWED_AWAITING_HUMAN_MERGE
+TASK_003_REVIEWED_AWAITING_HUMAN_MERGE
 
 ## Current ready task
 
@@ -10,31 +10,27 @@ None.
 
 ## Last completed task
 
-TASK-002 — Build safe end-to-end prototype.
+TASK-003 — Live FREE_ONLY gateway and bounded AI worker.
 
 ## Repository / project health
 
-- Existing catalog/search/list/summary/validate behavior: preserved
-- Existing static web and application guidance: preserved
-- Existing manual Alibaba smoke test: preserved and not executed in TASK-002
-- Offline catalog health review: implemented and exercised in CI
-- Non-authoritative eligibility triage: implemented with local profile JSON and explicit no-card negation handling
-- Credits Inventory prototype: implemented with local JSON validation/summary
-- FREE_ONLY router: implemented with fail-closed unknown billing/quota behavior and hard-stop fallback
-- Provider Adapter contract: implemented; Alibaba adapter is offline/config-only and refuses live invoke
-- Manual AI catalog review: implemented with dry-run default, read-only repository permissions, model selection passed through environment rather than shell interpolation, provider secret scoped only to explicit invoke mode, and Artifact-only output
-- Product design / roadmap: documented in `docs/PROTOTYPE.md`
-- Review: REV-001 and REV-002 accepted and fixed; no remaining P0/P1/P2/P3 findings
-- Review-fix validation: `quality` run #62 validate job succeeded including tests and offline prototype flow; `AI state check` run #20 succeeded
+- Catalog/search/list/summary/validate, static web, application guidance, offline review, eligibility triage, Inventory and FREE_ONLY Router: preserved and passing.
+- FREE_ONLY Gateway: implemented for one-shot safety-gated invocation with fresh live attestation, example-inventory live rejection, input/output caps, no retries and local sanitized usage metadata.
+- Alibaba adapter: live-capable only through the Gateway; direct live invocation is blocked; `403 AllocationQuota.FreeTierOnly` becomes a hard stop.
+- Bounded AI Worker: implemented with max-eight explicit context files, repository-root confinement, local/private/generated path blocking, bounded context and Artifact-only output.
+- Manual `FREE_ONLY AI worker` Action: dry-run default, read-only repository permissions, secret scoped only to an explicitly confirmed live step.
+- Provider calls in TASK-003 validation: zero; all live network behavior was mocked.
+- Review: REV-003 and REV-004 accepted and fixed; no remaining P0/P1/P2/P3 findings.
+- Review-fix validation: `quality` run #103 succeeded including catalog validation, all tests and complete offline flow; `AI state check` run #33 succeeded.
 
 ## Current blockers
 
-None. Only final durable-state synchronization CI and the human merge decision remain. No provider call is required to review or merge the prototype.
+No implementation blocker. A real first model call is intentionally blocked until a human confirms the exact Alibaba model currently has free quota and Free Quota Only / stop-when-exhausted is active.
 
 ## Next human decision
 
-After the final synchronized head passes both workflows, review the prototype as a whole and decide whether to merge PR #2. Real provider/API invoke modes remain manual and require current free-quota/billing confirmation.
+After final synchronized-state CI passes, decide whether to merge PR #3. After merge, the next practical action is a human-confirmed dry-run followed by one bounded real Alibaba request, then use the same path for the first Artifact-only self-improvement Worker task.
 
 ## Last updated
 
-2026-09-03 by Regular Chat TASK-002 review workflow.
+2026-09-03 by Regular Chat TASK-003 review workflow.
