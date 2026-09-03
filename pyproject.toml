@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-credits-radar"
+version = "0.1.0"
+description = "Auditable catalog and CLI for free AI API, GPU, and cloud credits"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "AI Credits Radar contributors" }]
+dependencies = []
+
+[project.scripts]
+credits-radar = "ai_credits_radar.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
