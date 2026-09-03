@@ -2,7 +2,7 @@
 
 ## Current phase
 
-TASK_001_IN_PROGRESS
+TASK_001_REVIEWED_AWAITING_HUMAN_MERGE
 
 ## Current ready task
 
@@ -10,25 +10,27 @@ None.
 
 ## Last completed task
 
-None under the P001 workflow layer. Existing product MVP predates this durable task ledger and remains the baseline implementation.
+TASK-001 — Bootstrap P001 AI workflow state.
 
 ## Repository / project health
 
-- Existing catalog/CLI/tests/static web: present
-- Existing quality CI: present
-- Existing manual Alibaba smoke test: present
-- Project workflow scaffold: being installed in TASK-001
-- Project facts and durable decisions: initialized from approved product summaries and current repository inspection
-- Product behavior changes in TASK-001: none intended
+- Existing catalog/CLI/tests/static web: present and unchanged by TASK-001
+- Existing quality CI: run #27 succeeded on the reviewed bootstrap head
+- Existing manual Alibaba smoke test: present and unchanged; not executed in TASK-001
+- Project workflow scaffold: installed on PR #1
+- AI state check: run #3 succeeded on the reviewed bootstrap head
+- Project facts and durable decisions: initialized
+- Regular Chat Review: completed with no P0/P1/P2/P3 findings
+- Product behavior changes in TASK-001: none
 
 ## Current blockers
 
-None. Bootstrap changes require CI and Regular Chat review before human merge.
+None. Only final synchronized-state CI and the human merge decision remain.
 
 ## Next human decision
 
-After the bootstrap PR passes both existing quality CI and the new AI-state check, review the diff and decide whether to merge. Only after bootstrap merge should the next product task be promoted to `READY`.
+After the final state-only synchronization commits pass both `quality` and `AI state check`, decide whether to merge PR #1. After merge, perform a read-only gap audit before promoting the first real product task to `READY`.
 
 ## Last updated
 
-2026-09-03 by Regular Chat P001 onboarding workflow.
+2026-09-03 by Regular Chat P001 review workflow.
