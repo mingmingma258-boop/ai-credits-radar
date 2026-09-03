@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "example": true,
-  "notes": "Synthetic demo data only. Do not treat these balances or providers as real user holdings.",
+  "notes": "Synthetic demo data only. The gateway rejects example=true for real live requests even when safety flags are present.",
   "resources": [
     {
       "id": "example-expiring-free-a",
-      "provider": "Example Free Provider A",
-      "program_id": null,
+      "provider": "Alibaba Cloud Model Studio (synthetic example)",
+      "program_id": "aliyun-bailian-new-user-quota",
       "resource_type": "api",
       "status": "available",
       "free_only": true,
@@ -17,9 +17,18 @@
       "expires_at": "2099-01-10",
       "priority": 70,
       "models": [
-        {"id": "example-a-model", "tier": "A", "enabled": true},
+        {"id": "qwen-plus", "tier": "A", "enabled": true},
         {"id": "example-b-model", "tier": "B", "enabled": true}
-      ]
+      ],
+      "live_use": {
+        "provider_id": "aliyun-bailian",
+        "allow_live": true,
+        "free_quota_only": true,
+        "paid_fallback_disabled": true,
+        "confirmed_at": null,
+        "max_requests_per_run": 1,
+        "max_output_tokens": 800
+      }
     },
     {
       "id": "example-unknown-billing",
