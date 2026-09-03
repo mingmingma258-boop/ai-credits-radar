@@ -119,3 +119,62 @@ python scripts/ai_catalog_review.py --mode dry-run --output /tmp/ai-catalog-revi
 ```
 
 Provider smoke tests and AI invoke mode were intentionally not run for TASK-002.
+
+---
+
+## TASK-003 — Live FREE_ONLY gateway and bounded AI worker
+
+- **Project:** P001
+- **Status:** READY
+- **Work type:** CODE
+- **Owner:** human
+- **Executor:** bounded repository executor
+- **Reviewer:** Regular Chat
+- **Goal:** Make P001 ready to safely use a real free-quota model and let that model produce bounded development artifacts for P001, while preserving human review/merge and preventing automatic paid fallback.
+
+### In scope
+
+- Extend the credits inventory with explicit live-use safety attestations: provider id, confirmation timestamp, `free_quota_only`/equivalent stop protection, and per-run token/request caps.
+- Add a `FREE_ONLY` gateway that routes first, then performs provider preflight, refuses stale/unknown/unsafe attestations, caps output tokens, disables retries, and records sanitized local usage metadata.
+- Promote the Alibaba Model Studio adapter from config-only to an explicitly gated live adapter using the OpenAI-compatible endpoint. It may invoke only after the gateway has produced a confirmed-safe route and live-use attestation.
+- Treat Alibaba `403 AllocationQuota.FreeTierOnly` as a safe exhaustion stop, not as a retry/fallback signal.
+- Add `credits-radar invoke` for explicit one-shot live use and a `--dry-run` path that exercises all safety gates without sending a request.
+- Add a bounded AI Worker v1 that accepts a task JSON plus an allowlist of repository context files, calls the same gateway, and writes proposal/patch/test-plan artifacts only; it must not edit files, commit, push, merge, access GitHub secrets, or run shell commands.
+- Add a manual GitHub Actions worker workflow whose default is dry-run. Live mode must require explicit per-run confirmations before the provider secret is exposed to the invoking step.
+- Add synthetic examples, documentation, and regression tests. PR CI remains provider-offline.
+- Synchronize post-merge TASK-002 state.
+
+### Out of scope
+
+- Triggering a real provider call during TASK-003 implementation or CI.
+- Automatically checking or changing Alibaba billing/account/identity settings.
+- Automatically deciding that a provider is free from API success alone.
+- Automatic provider fallback, paid fallback, retries that can multiply usage, background/scheduled live calls, or autonomous loops.
+- Direct AI Worker writes to the repository, shell execution, GitHub write permissions, secret access, PR creation, or merge.
+- Multi-provider live routing, automatic quota refresh, benchmark-derived tiers, discovery crawling, or application submission.
+
+### Acceptance criteria
+
+- [ ] Live invocation is impossible unless routing safety and explicit fresh live-use confirmation both pass.
+- [ ] Unknown/stale billing or quota state, missing stop protection, expired resource, missing key, unsupported provider, or Tier mismatch hard-stop before a request is sent.
+- [ ] Alibaba live adapter sends at most one bounded request per `invoke`, redacts secrets/errors, has no automatic retry, and recognizes `AllocationQuota.FreeTierOnly` as exhausted/free-only stop.
+- [ ] `credits-radar invoke --dry-run` reports the selected route and preflight without network access or provider secrets.
+- [ ] Live `credits-radar invoke` requires an explicit local inventory plus confirmation metadata; no committed example can accidentally authorize live use.
+- [ ] AI Worker reads only explicitly allowlisted context files under the repository root and writes artifacts only to a caller-selected output directory.
+- [ ] Worker prompt/output size limits prevent unbounded repository/context ingestion and large accidental calls.
+- [ ] Manual Actions worker defaults to dry-run; live step receives the secret only when both free-quota and stop-protection confirmations are true.
+- [ ] No provider call occurs in unit tests or PR CI; network behavior is mocked.
+- [ ] Existing catalog/prototype commands remain compatible and all tests/state checks pass.
+- [ ] Regular Chat reviews the final PR; all P0/P1/P2/P3 findings are resolved or explicitly triaged before human merge.
+
+### Validation
+
+```bash
+python scripts/check_ai_state.py
+credits-radar validate
+python -m unittest discover -s tests -v
+credits-radar invoke --inventory data/credits_inventory.example.json --tier A --prompt "hello" --dry-run --json
+python scripts/free_ai_worker.py --task data/worker_task.example.json --inventory data/credits_inventory.example.json --dry-run --output-dir /tmp/free-ai-worker
+```
+
+Do not run a real provider invocation for TASK-003 validation.
