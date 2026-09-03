@@ -7,14 +7,18 @@
 如果申请人是中国大陆的个人开发者/学生，建议先走“学生资格 → 免费层 → 新客试用”的低风险顺序：
 
 1. **学生资格**：先核对 [Azure for Students](https://azure.microsoft.com/en-us/free/students) 是否接受本校邮箱、当前地区和账号状态。官方页面目前列出学生账号的 US$100/12 个月额度，且注册不要求信用卡；这不代表每个学校域名或中国区环境都会自动通过。
-2. **免费层与共享 GPU**：再用 Gemini API、Mistral、Groq、OpenRouter、Hugging Face ZeroGPU、Colab 或 Kaggle 做最小 demo；各服务的地区、登录和配额要逐页确认。
+2. **免费层与共享 GPU**：再用 Gemini API、阿里云百炼、Mistral、Groq、OpenRouter、Hugging Face ZeroGPU、Colab 或 Kaggle 做最小 demo；各服务的地区、登录和配额要逐页确认。
 3. **云试用**：只有在确实需要云端部署时，再核对 Google Cloud、AWS、Azure、Oracle 的新客资格和付款/账单规则。
 
 微软全球 Azure 与 Azure operated by 21Vianet 是分开的服务环境。不要用外国地址、虚假地区、VPN 或重复账号规避地区与风控；如果页面把你带到登录、学校邮箱验证、验证码、实名或最终提交，必须由账号持有人重新检查后完成。
 
 ### 第一层：先验证产品，不需要 startup 审核
 
-先用 Gemini Developer API、Mistral Free Mode、Groq Free Tier、OpenRouter free models、Cloudflare Workers AI、Hugging Face ZeroGPU、Colab 或 Kaggle 做小规模 demo。这样可以先产生真实的仓库、用量和产品说明，避免在申请表里描述一个尚未验证的想法。
+先用 Gemini Developer API、阿里云百炼新人额度、Mistral Free Mode、Groq Free Tier、OpenRouter free models、Cloudflare Workers AI、Hugging Face ZeroGPU、Colab 或 Kaggle 做小规模 demo。这样可以先产生真实的仓库、用量和产品说明，避免在申请表里描述一个尚未验证的想法。
+
+### 阿里云百炼 Token
+
+百炼的新人免费额度是模型调用 Token，适用模型、地区、剩余量和有效期以控制台为准。优先选择华北 2（北京）区域，在“免费额度”页面确认模型后开启“免费额度用完即停”。仓库的 `Alibaba Cloud smoke test` 工作流只允许手动触发，默认发送极短的连通性请求；需要先把 `DASHSCOPE_API_KEY` 放入 GitHub Actions repository secret，绝不要把 Token 写入文件、Issue、日志或聊天。
 
 ### 第二层：小额或阶段型额度
 
