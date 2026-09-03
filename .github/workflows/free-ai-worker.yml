@@ -1,0 +1,108 @@
+name: FREE_ONLY AI worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run never reads the provider secret; invoke sends exactly one bounded request"
+        required: true
+        type: choice
+        options:
+          - dry-run
+          - invoke
+        default: dry-run
+      task_text:
+        description: "Bounded task for the model; output is an artifact only"
+        required: true
+        default: "Review the supplied P001 context and propose one small maintainability improvement with tests."
+      context_files:
+        description: "Comma-separated repository files (max 8)"
+        required: true
+        default: "src/ai_credits_radar/routing.py,src/ai_credits_radar/gateway.py,AGENTS.md"
+      model:
+        description: "Model whose free quota you confirmed in the Model Studio console"
+        required: true
+        default: "qwen-plus"
+      model_tier:
+        description: "Manual capability tier fact for routing; not benchmark-derived yet"
+        required: true
+        type: choice
+        options:
+          - B
+          - A
+          - S
+        default: A
+      max_output_tokens:
+        description: "Hard output-token cap; repository maximum is 2048"
+        required: true
+        default: "800"
+      quota_expires_at:
+        description: "Optional free-quota expiry date from console (YYYY-MM-DD)"
+        required: false
+        default: ""
+      free_quota_confirmed:
+        description: "I checked this model and it currently has free quota"
+        required: true
+        type: boolean
+        default: false
+      free_quota_only_confirmed:
+        description: "I confirmed Free Quota Only / stop-when-exhausted protection is active"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: python -m pip install -e .
+
+      - name: Dry-run safety gates
+        if: ${{ inputs.mode == 'dry-run' }}
+        env:
+          WORKER_TASK_TEXT: ${{ inputs.task_text }}
+          WORKER_CONTEXT_FILES: ${{ inputs.context_files }}
+          WORKER_MODEL: ${{ inputs.model }}
+          WORKER_MODEL_TIER: ${{ inputs.model_tier }}
+          WORKER_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
+          WORKER_QUOTA_EXPIRES_AT: ${{ inputs.quota_expires_at }}
+          WORKER_FREE_QUOTA_CONFIRMED: ${{ inputs.free_quota_confirmed }}
+          WORKER_FREE_QUOTA_ONLY_CONFIRMED: ${{ inputs.free_quota_only_confirmed }}
+        run: python scripts/free_ai_worker.py --actions-env --dry-run --output-dir artifacts/free-ai-worker
+
+      - name: Reject live mode without both confirmations
+        if: ${{ inputs.mode == 'invoke' && (!inputs.free_quota_confirmed || !inputs.free_quota_only_confirmed) }}
+        run: |
+          echo "HARD STOP: live mode requires current free quota and Free Quota Only confirmations." >&2
+          exit 1
+
+      - name: Run one FREE_ONLY worker request
+        if: ${{ inputs.mode == 'invoke' && inputs.free_quota_confirmed && inputs.free_quota_only_confirmed }}
+        env:
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          DASHSCOPE_BASE_URL: ${{ vars.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1' }}
+          WORKER_TASK_TEXT: ${{ inputs.task_text }}
+          WORKER_CONTEXT_FILES: ${{ inputs.context_files }}
+          WORKER_MODEL: ${{ inputs.model }}
+          WORKER_MODEL_TIER: ${{ inputs.model_tier }}
+          WORKER_MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
+          WORKER_QUOTA_EXPIRES_AT: ${{ inputs.quota_expires_at }}
+          WORKER_FREE_QUOTA_CONFIRMED: "true"
+          WORKER_FREE_QUOTA_ONLY_CONFIRMED: "true"
+        run: python scripts/free_ai_worker.py --actions-env --output-dir artifacts/free-ai-worker --usage-log artifacts/free-ai-worker/usage.jsonl
+
+      - name: Upload worker artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-ai-worker-${{ github.run_id }}
+          path: artifacts/free-ai-worker/
+          if-no-files-found: error
